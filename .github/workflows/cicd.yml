@@ -1,0 +1,42 @@
+name: Deploy Go Application
+
+on:
+    push:
+        branches:
+          - main
+
+jobs:
+    build:
+        runs-on: ubuntu-latest 
+        steps:
+            - name: Checkout Source
+              uses: actions/checkout@v4
+            - name: Create .env file
+              run: echo "PORT=${{ secrets.PORT }}" >> .env
+            - name: Create .env file
+              run: echo "PORT=${{ secrets.DB_URL }}" >> .env
+            - name: Create .env file
+              run: echo "PORT=${{ secrets.SECRET }}" >> .env
+            - name: Create .env file
+              run: echo "PORT=${{ secrets.AWS_REGION }}" >> .env
+            - name: Create .env file
+              run: echo "PORT=${{ secrets.AWS_ACCESS_KEY_ID }}" >> .env
+            - name: Create .env file
+              run: echo "PORT=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> .env
+            - name: Login to docker hub
+              run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_ACCESS_TOKEN }}
+            - name: Build docker image
+              run: docker build -t muhammadandres/manajemen-tugas-master .
+            - name: Push image to docker hub
+              run: docker push muhammadandres/manajemen-tugas-master:latest
+              
+    deploy:
+        needs: build
+        runs-on: self-hosted
+        steps:
+            - name: Pull docker image
+              run: docker pull muhammadandres/manajemen-tugas-master:latest
+            - name: Delete old container
+              run: docker rm -f manajemen-tugas-container
+            - name: Run docker container          
+              run: docker run -d -p 5050:5050 --name manajemen-tugas-container muhammadandres/manajemen-tugas-master

@@ -1,0 +1,5 @@
+.air.toml
+.idea/
+.vscode/
+tmp/
+.dockerignore
