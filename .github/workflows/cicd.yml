@@ -3,7 +3,7 @@ name: Deploy Go Application
 on:
     push:
         branches:
-          - main
+          - master
 
 jobs:
     build:
@@ -26,17 +26,17 @@ jobs:
             - name: Login to docker hub
               run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_ACCESS_TOKEN }}
             - name: Build docker image
-              run: docker build -t muhammadandres/manajemen-tugas-master .
+              run: docker build -t muhammadandres/manajemen-tugas-app .
             - name: Push image to docker hub
-              run: docker push muhammadandres/manajemen-tugas-master:latest
+              run: docker push muhammadandres/manajemen-tugas-app:latest
               
     deploy:
         needs: build
         runs-on: self-hosted
         steps:
             - name: Pull docker image
-              run: docker pull muhammadandres/manajemen-tugas-master:latest
+              run: docker pull muhammadandres/manajemen-tugas-app:latest
             - name: Delete old container
               run: docker rm -f manajemen-tugas-container
             - name: Run docker container          
-              run: docker run -d -p 5050:5050 --name manajemen-tugas-container muhammadandres/manajemen-tugas-master
+              run: docker run -d -p 6060:6060 --name manajemen-tugas-container muhammadandres/manajemen-tugas-app
