@@ -10,8 +10,7 @@ jobs:
         runs-on: ubuntu-latest 
         steps:
             - name: Checkout Source
-              uses: actions/checkout@v4
-            
+              uses: actions/checkout@v4   
             - name: Create .env file
               run: |
                 echo 'PORT=${{ secrets.PORT }}' >> .env
@@ -20,13 +19,10 @@ jobs:
                 echo 'AWS_REGION=${{ secrets.AWS_REGION }}' >> .env
                 echo 'AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}' >> .env
                 echo 'AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}' >> .env
-            
             - name: Login to Docker Hub
               run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_ACCESS_TOKEN }}
-            
             - name: Build Docker image
               run: docker build -t muhammadandres/manajemen-tugas .
-            
             - name: Push image to Docker Hub
               run: docker push muhammadandres/manajemen-tugas:latest
     deploy:
@@ -39,18 +35,14 @@ jobs:
                 aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
                 aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
                 aws-region: ${{ secrets.AWS_REGION }}
-
             - name: Install AWS CLI v2
               run: |
                 curl "https://awscli.amazonaws.com/AWSCLIV2.pkg" -o "AWSCLIV2.pkg"
                 sudo installer -pkg AWSCLIV2.pkg -target /
-
             - name: Pull Docker image
               run: docker pull muhammadandres/manajemen-tugas:latest
-
             - name: Delete old container
               run: docker rm -f manajemen-tugas-container || true
-
             - name: Run Docker container
               env:
                 DB_HOST: ${{ secrets.DB_HOST }}
