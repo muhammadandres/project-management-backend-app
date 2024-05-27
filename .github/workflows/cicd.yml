@@ -11,32 +11,56 @@ jobs:
         steps:
             - name: Checkout Source
               uses: actions/checkout@v4
+            
             - name: Create .env file
-              run: echo 'PORT=${{ secrets.PORT }}' >> .env
-            - name: Create .env file
-              run: echo 'PORT=${{ secrets.DB_URL }}' >> .env
-            - name: Create .env file
-              run: echo 'PORT=${{ secrets.SECRET }}' >> .env
-            - name: Create .env file
-              run: echo 'PORT=${{ secrets.AWS_REGION }}' >> .env
-            - name: Create .env file
-              run: echo 'PORT=${{ secrets.AWS_ACCESS_KEY_ID }}' >> .env
-            - name: Create .env file
-              run: echo 'PORT=${{ secrets.AWS_SECRET_ACCESS_KEY }}' >> .env
-            - name: Login to docker hub
+              run: |
+                echo 'PORT=${{ secrets.PORT }}' >> .env
+                echo 'DB_URL=${{ secrets.DB_URL }}' >> .env
+                echo 'SECRET=${{ secrets.SECRET }}' >> .env
+                echo 'AWS_REGION=${{ secrets.AWS_REGION }}' >> .env
+                echo 'AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}' >> .env
+                echo 'AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}' >> .env
+            
+            - name: Login to Docker Hub
               run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_ACCESS_TOKEN }}
-            - name: Build docker image
-              run: docker build -t muhammadandres/manajemen-tugas-app .
-            - name: Push image to docker hub
-              run: docker push muhammadandres/manajemen-tugas-app:latest
-              
+            
+            - name: Build Docker image
+              run: docker build -t muhammadandres/manajemen-tugas .
+            
+            - name: Push image to Docker Hub
+              run: docker push muhammadandres/manajemen-tugas:latest
+
     deploy:
         needs: build
         runs-on: self-hosted
         steps:
-            - name: Pull docker image
-              run: docker pull muhammadandres/manajemen-tugas-app:latest
+            - name: Configure AWS credentials
+              uses: aws-actions/configure-aws-credentials@v1
+              with:
+                aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+                aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+                aws-region: ${{ secrets.AWS_REGION }}
+
+            - name: Install AWS CLI v2
+              run: |
+                curl "https://awscli.amazonaws.com/AWSCLIV2.pkg" -o "AWSCLIV2.pkg"
+                sudo installer -pkg AWSCLIV2.pkg -target /
+
+            - name: Pull Docker image
+              run: docker pull muhammadandres/manajemen-tugas:latest
+
             - name: Delete old container
-              run: docker rm -f manajemen-tugas-container
-            - name: Run docker container          
-              run: docker run -d -p 6060:6060 --name manajemen-tugas-container muhammadandres/manajemen-tugas-app
+              run: docker rm -f manajemen-tugas-container || true
+
+            - name: Run Docker container
+              env:
+                DB_HOST: ${{ secrets.DB_HOST }}
+                DB_USER: ${{ secrets.DB_USER }}
+                DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+                DB_NAME: ${{ secrets.DB_NAME }}
+              run: docker run -d -p 6060:6060 --network host --name manajemen-tugas-container \
+                   -e DB_HOST=${{ secrets.DB_HOST }} \
+                   -e DB_USER=${{ secrets.DB_USER }} \
+                   -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
+                   -e DB_NAME=${{ secrets.DB_NAME }} \
+                   muhammadandres/manajemen-tugas:latest
