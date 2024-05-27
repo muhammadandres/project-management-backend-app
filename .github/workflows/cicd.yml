@@ -29,7 +29,6 @@ jobs:
             
             - name: Push image to Docker Hub
               run: docker push muhammadandres/manajemen-tugas:latest
-
     deploy:
         needs: build
         runs-on: self-hosted
