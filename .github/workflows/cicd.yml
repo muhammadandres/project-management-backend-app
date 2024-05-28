@@ -11,14 +11,6 @@ jobs:
         steps:
             - name: Checkout Source
               uses: actions/checkout@v4   
-            - name: Add user to docker group (if necessary)
-              run: |
-                if [ ! $(getent group docker | grep $USER) ]; then
-                  sudo usermod -aG docker $USER
-                  if [ $? -eq 0 ]; then
-                    sudo systemctl restart docker
-                  fi
-                fi
             - name: Create .env file
               run: |
                 echo 'PORT=${{ secrets.PORT }}' >> .env
@@ -50,6 +42,14 @@ jobs:
                 unzip -o awscliv2.zip
                 sudo ./aws/install --update
               shell: bash
+            - name: Add user to docker group (if necessary)
+              run: |
+                if [ ! $(getent group docker | grep $USER) ]; then
+                  sudo usermod -aG docker $USER
+                  if [ $? -eq 0 ]; then
+                    sudo systemctl restart docker
+                  fi
+                fi
             - name: Pull Docker image
               run: docker pull muhammadandres/manajemen-tugas:latest
             - name: Delete old container
