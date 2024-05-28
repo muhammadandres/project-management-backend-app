@@ -11,10 +11,14 @@ jobs:
         steps:
             - name: Checkout Source
               uses: actions/checkout@v4   
-            - name: Add user to docker group
+            - name: Add user to docker group (if necessary)
               run: |
-                sudo usermod -aG docker $USER
-                newgrp docker
+                if [ ! $(getent group docker | grep $USER) ]; then
+                  sudo usermod -aG docker $USER
+                  if [ $? -eq 0 ]; then
+                    sudo systemctl restart docker
+                  fi
+                fi
             - name: Create .env file
               run: |
                 echo 'PORT=${{ secrets.PORT }}' >> .env
