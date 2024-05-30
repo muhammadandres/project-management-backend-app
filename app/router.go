@@ -25,12 +25,12 @@ func SetupRoutes(app *fiber.App, db *gorm.DB) {
 	userRoutes.Get("users", userController.GetAllUsers)
 	userRoutes.Get("user/:id", userController.GetUserByID)
 	userRoutes.Delete("user/:id", userController.DeleteUser)
-	userRoutes.Use(middleware.RequireAuthUser(userService)) // Gunakan middleware untuk semua route dalam grup user
+	userRoutes.Use(middleware.AuthUser(userService)) // Gunakan middleware untuk semua route dalam grup user
 	userRoutes.Put("user/:id", userController.UpdateUser)
 
 	// Group route untuk task
 	taskRoutes := app.Group("/")
-	taskRoutes.Use(middleware.RequireAuthUser(userService)) // Gunakan middleware untuk semua route dalam grup task
+	taskRoutes.Use(middleware.AuthUser(userService)) // Gunakan middleware untuk semua route dalam grup task
 	taskRoutes.Post("task", taskController.CreateTaskAndOwner)
 	taskRoutes.Put("task/:id", taskController.UpdateTaskAndOwner)
 	taskRoutes.Get("task/:id", taskController.GetTaskAndOwnerById)

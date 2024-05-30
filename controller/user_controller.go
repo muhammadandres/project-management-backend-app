@@ -45,12 +45,9 @@ func (c *UserController) LoginUser(ctx *fiber.Ctx) error {
 	}
 
 	ctx.Cookie(&fiber.Cookie{
-		Name:     "Authorization",
-		Value:    tokenString,
-		Expires:  time.Now().Add(time.Hour * 24 * 1),
-		Secure:   true,
-		HTTPOnly: true,
-		SameSite: "Lax",
+		Name:    "Authorization",
+		Value:   tokenString,
+		Expires: time.Now().Add(time.Hour * 24 * 1),
 	})
 
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Login successfully"})

@@ -7,7 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func RequireAuthUser(userService service.UserService) fiber.Handler {
+func AuthUser(userService service.UserService) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		// Get the cookie from request
 		tokenString := ctx.Cookies("Authorization")
