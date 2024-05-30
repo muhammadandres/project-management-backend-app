@@ -60,6 +60,9 @@ func (s *userService) LoginUser(user *domain.User) (string, error) {
 		}
 		return "", errors.New(errMsg)
 	}
+	if user.Password != "" {
+		return "", errors.New("Password is required") // Mengembalikan pesan kesalahan jika login gagal
+	}
 
 	// Mendapatkan data pengguna dari repository
 	userRepo := *user

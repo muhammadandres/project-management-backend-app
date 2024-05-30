@@ -31,17 +31,6 @@ func main() {
 	// Setup routes
 	app.SetupRoutes(fiberApp, db)
 
-	// cek .env
-	port := os.Getenv("PORT")
-	dburl := os.Getenv("DB_URL")
-	awsregion := os.Getenv("AWS_REGION")
-	secret := os.Getenv("SECRET")
-
-	log.Println("port= " + port)
-	log.Println("dburl=" + dburl)
-	log.Println("awsregion= " + awsregion)
-	log.Println("secret= " + secret)
-
 	// Start Fiber
 	log.Fatal(fiberApp.Listen(":" + os.Getenv("PORT")))
 }
