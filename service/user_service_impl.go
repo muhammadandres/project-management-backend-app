@@ -116,7 +116,7 @@ func (s *userService) RequireAuthUser(tokenString string) (*domain.User, error) 
 	userID := claims["sub"]
 	user, err := s.userRepository.FindById(userID)
 	if err != nil {
-		return nil, errors.New("User not found")
+		return nil, fmt.Errorf("User not found: %v", err)
 	}
 
 	return user, nil
