@@ -1,14 +1,17 @@
 package middleware
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"log"
 	"manajemen_tugas_master/service"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 func RequireAuthUser(userService service.UserService) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		// Get the cookie from request
 		tokenString := ctx.Cookies("Authorization")
+		log.Println("tokenstring= " + tokenString)
 		if tokenString == "" {
 			return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Your session has expired, Please login again"})
 		}
