@@ -5,10 +5,8 @@ import (
 	"manajemen_tugas_master/app"
 	"manajemen_tugas_master/helper"
 	"os"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 )
@@ -26,15 +24,15 @@ func main() {
 	// Initialize Fiber
 	fiberApp := fiber.New()
 
-	// Konfigurasi CORS
-	fiberApp.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://127.0.0.1:5500",
-		AllowMethods:     "GET,POST,HEAD,PUT,DELETE,PATCH",
-		AllowHeaders:     "Origin,Content-Type,Accept,Authorization",
-		ExposeHeaders:    "Content-Length",
-		AllowCredentials: true,
-		MaxAge:           int((12 * time.Hour).Seconds()),
-	}))
+	// // Konfigurasi CORS
+	// fiberApp.Use(cors.New(cors.Config{
+	// 	AllowOrigins:     "http://127.0.0.1:5500",
+	// 	AllowMethods:     "GET,POST,HEAD,PUT,DELETE,PATCH",
+	// 	AllowHeaders:     "Origin,Content-Type,Accept,Authorization",
+	// 	ExposeHeaders:    "Content-Length",
+	// 	AllowCredentials: true,
+	// 	MaxAge:           int((12 * time.Hour).Seconds()),
+	// }))
 
 	// Middleware
 	fiberApp.Use(logger.New())

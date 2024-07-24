@@ -60,7 +60,7 @@ jobs:
                 DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
                 DB_NAME: ${{ secrets.DB_NAME }}
               run: |
-                docker run -d -p 6060:6060 --network host --name manajemen-tugas-container \
+                docker run -d -p 80:6060 --network host --name manajemen-tugas-container \
                   -e DB_HOST=$DB_HOST \
                   -e DB_USER=$DB_USER \
                   -e DB_PASSWORD=$DB_PASSWORD \
