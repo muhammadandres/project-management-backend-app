@@ -1,11 +1,12 @@
 package app
 
 import (
-	"github.com/go-playground/validator/v10"
-	"gorm.io/gorm"
 	"manajemen_tugas_master/controller"
 	"manajemen_tugas_master/repository"
 	"manajemen_tugas_master/service"
+
+	"github.com/go-playground/validator/v10"
+	"gorm.io/gorm"
 )
 
 // user
@@ -21,14 +22,27 @@ func InitializeControllerUser(userService service.UserService) (controller.UserC
 	return *controller.NewUserController(userService), nil
 }
 
+// board
+func InitializeRepositoryBoard(db *gorm.DB) (repository.BoardRepository, error) {
+	return repository.NewBoardRepository(db), nil
+}
+
+func InitializeServiceBoard(boardRepository repository.BoardRepository) (service.BoardService, error) {
+	return service.NewBoardService(boardRepository), nil
+}
+func InitializeControllerBoard(boardService service.BoardService) (controller.BoardController, error) {
+	return *controller.NewBoardController(boardService), nil
+}
+
 // task
 func InitializeRepositoryTask(db *gorm.DB) (repository.TaskAndOwnerRepository, error) {
 	return repository.NewTaskAndOwnerRepository(db), nil
 }
 
-func InitializeServiceTask(taskAndOwnerRepository repository.TaskAndOwnerRepository) (service.TaskAndOwnerService, error) {
-	return service.NewTaskAndOwnerService(taskAndOwnerRepository, validator.New()), nil
+func InitializeServiceTask(taskAndOwnerRepository repository.TaskAndOwnerRepository, boardRepository repository.BoardRepository) (service.TaskAndOwnerService, error) {
+	return service.NewTaskAndOwnerService(taskAndOwnerRepository, boardRepository, validator.New()), nil
 }
+
 func InitializeControllerTask(taskAndOwnerService service.TaskAndOwnerService) (controller.TaskAndOwnerController, error) {
 	return *controller.NewTaskController(taskAndOwnerService), nil
 }

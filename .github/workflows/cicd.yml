@@ -10,7 +10,7 @@ jobs:
         runs-on: ubuntu-latest 
         steps:
             - name: Checkout Source
-              uses: actions/checkout@v4   
+              uses: actions/checkout@v4
             - name: Create .env file
               run: |
                 echo 'PORT=${{ secrets.PORT }}' >> .env
@@ -19,12 +19,19 @@ jobs:
                 echo 'AWS_REGION=${{ secrets.AWS_REGION }}' >> .env
                 echo 'AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}' >> .env
                 echo 'AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}' >> .env
+                
+            - name: Create credentials.json
+              env:
+                GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CALENDAR_CREDENTIALS }}
+              run: |
+                echo '${GOOGLE_CALENDAR_CREDENTIALS}' >> credentials.json    
+                
             - name: Login to Docker Hub
               run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_ACCESS_TOKEN }}
             - name: Build Docker image
-              run: docker build -t muhammadandres/manajemen-tugas .
+              run: docker build -t muhammadandres/manajementugas .
             - name: Push image to Docker Hub
-              run: docker push muhammadandres/manajemen-tugas:latest
+              run: docker push muhammadandres/manajementugas:latest
     deploy:
         needs: build
         runs-on: self-hosted
@@ -43,7 +50,7 @@ jobs:
                 sudo ./aws/install --update
               shell: bash
             - name: Pull Docker image
-              run: docker pull muhammadandres/manajemen-tugas:latest
+              run: docker pull muhammadandres/manajementugas:latest
             - name: Delete old container
               run: docker rm -f manajemen-tugas-container || true
             - name: Run Docker container
@@ -58,4 +65,4 @@ jobs:
                   -e DB_USER=$DB_USER \
                   -e DB_PASSWORD=$DB_PASSWORD \
                   -e DB_NAME=$DB_NAME \
-                  muhammadandres/manajemen-tugas:latest
+                  muhammadandres/manajementugas:latest

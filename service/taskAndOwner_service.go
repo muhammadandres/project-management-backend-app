@@ -6,7 +6,7 @@ import (
 )
 
 type TaskAndOwnerService interface {
-	CreateTaskAndOwner(user *domain.User, task *domain.Task) (*domain.Task, *domain.Owner, error)
+	CreateTaskAndOwner(user *domain.User, task *domain.Task, board *domain.Board) (*domain.Task, *domain.Owner, error)
 	GetTaskAndOwnerById(id uint) (*domain.Task, error)
 	FindAllTasksAndOwners() ([]*domain.Task, error)
 	FindAllOwners() ([]*domain.Task, error)
@@ -14,7 +14,7 @@ type TaskAndOwnerService interface {
 	FindAllEmployees() ([]*domain.Task, error)
 	FindAllPlanningFiles() ([]*domain.Task, error)
 	FindAllProjectFiles() ([]*domain.Task, error)
-	UpdateTaskAndOwner(task *domain.Task, manager *domain.Manager, employee *domain.Employee, planningFile *domain.PlanningFile, projectFile *domain.ProjectFile, taskID uint) (*web.UpdateResponse, error)
+	UpdateTaskAndOwner(task *domain.Task, manager *domain.Manager, employee *domain.Employee, planningFile *domain.PlanningFile, projectFile *domain.ProjectFile, taskID uint, boardID uint) (*web.UpdateResponse, error)
 	UpdateValidationOwner(taskID uint, userID uint) error
 	UpdateValidationManager(taskID uint, userID uint) error
 	UpdateValidationEmployee(taskID uint, userID uint) error

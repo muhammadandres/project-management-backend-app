@@ -3,14 +3,15 @@ package service
 import (
 	"errors"
 	"fmt"
-	"github.com/go-playground/validator/v10"
-	"github.com/golang-jwt/jwt/v5"
-	"golang.org/x/crypto/bcrypt"
 	"manajemen_tugas_master/helper"
 	"manajemen_tugas_master/model/domain"
 	"manajemen_tugas_master/repository"
 	"os"
 	"time"
+
+	"github.com/go-playground/validator/v10"
+	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type userService struct {
@@ -24,7 +25,7 @@ func NewUserService(userRepository repository.UserRepository, validator *validat
 	return &userService{userRepository, validator}
 }
 
-func (s *userService) SignupUser(user *domain.User) (*domain.User, error) {
+func (s *userService) SignupUser(user *domain.User) (string, error) {
 	if err := s.validator.Struct(user); err != nil {
 		// Jika terjadi kesalahan validasi, konversikan ke satu pesan kesalahan
 		var errMsg string
@@ -32,49 +33,25 @@ func (s *userService) SignupUser(user *domain.User) (*domain.User, error) {
 		for _, fieldError := range validationErrors {
 			errMsg += fmt.Sprintf("Invalid format in %s", fieldError.Field())
 		}
-		return nil, errors.New(errMsg)
+		return "", errors.New(errMsg)
 	}
 
 	// Password diubah menjadi hash menggunakan algoritma bcrypt
 	hash, err := bcrypt.GenerateFromPassword([]byte(user.Password), 10)
 	if err != nil {
-		return nil, errors.New("Failed to hash password")
+		return "", errors.New("Failed to hash password")
 	}
 
 	user.Password = string(hash)
 
-	signup, err := s.userRepository.Signup(user)
-	if err != nil {
-		return nil, err
+	if err := s.userRepository.Signup(user); err != nil {
+		return "", err
 	}
 
-	return signup, nil
-}
-
-func (s *userService) LoginUser(user *domain.User) (string, error) {
-	if err := s.validator.Struct(user); err != nil {
-		var errMsg string
-		validationErrors := err.(validator.ValidationErrors)
-		for _, fieldError := range validationErrors {
-			errMsg += fmt.Sprintf("Invalid format in %s", fieldError.Field())
-		}
-		return "", errors.New(errMsg)
-	}
-	if user.Password != "" {
-		return "", errors.New("Password is required") // Mengembalikan pesan kesalahan jika login gagal
-	}
-
-	// Mendapatkan data pengguna dari repository
-	userRepo := *user
-	dbUser, err := s.userRepository.Login(&userRepo)
+	// ambil id user berdasarkan email
+	dbUser, err := s.userRepository.Login(user)
 	if err != nil {
 		return "", errors.New("User not found") // Mengembalikan pesan kesalahan jika login gagal
-	}
-
-	// membandingkan hash password di database, dengan hash password yang baru di kirimkan
-	err = bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(user.Password))
-	if err != nil {
-		return "", errors.New("Invalid password") // Mengembalikan pesan kesalahan jika password salah
 	}
 
 	// generate token jwt
@@ -88,7 +65,50 @@ func (s *userService) LoginUser(user *domain.User) (string, error) {
 		return "", err // Return empty token string and error
 	}
 
-	return tokenString, nil // Return token string dan nil error
+	return tokenString, nil
+}
+
+func (s *userService) LoginUser(user *domain.User) (string, error) {
+	if err := s.validator.Struct(user); err != nil {
+		var errMsg string
+		validationErrors := err.(validator.ValidationErrors)
+		for _, fieldError := range validationErrors {
+			errMsg += fmt.Sprintf("Invalid format in %s", fieldError.Field())
+		}
+		return "", errors.New(errMsg)
+	}
+
+	if user.Password == "" {
+		return "", errors.New("Password is required")
+	}
+
+	// Simpan password yang diberikan user
+	providedPassword := user.Password
+
+	// Mendapatkan data pengguna dari repository
+	dbUser, err := s.userRepository.Login(user)
+	if err != nil {
+		return "", errors.New("User not found")
+	}
+
+	// membandingkan hash password di database, dengan password yang baru dikirimkan
+	err = bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(providedPassword))
+	if err != nil {
+		return "", errors.New("Invalid password")
+	}
+
+	// generate token jwt
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub": dbUser.ID,
+		"exp": time.Now().Add(time.Hour * 24 * 30).Unix(),
+	})
+
+	tokenString, err := token.SignedString([]byte(os.Getenv("SECRET")))
+	if err != nil {
+		return "", err
+	}
+
+	return tokenString, nil
 }
 
 func (s *userService) RequireAuthUser(tokenString string) (*domain.User, error) {
@@ -116,10 +136,52 @@ func (s *userService) RequireAuthUser(tokenString string) (*domain.User, error) 
 	userID := claims["sub"]
 	user, err := s.userRepository.FindById(userID)
 	if err != nil {
-		return nil, fmt.Errorf("User not found: %v", err)
+		return nil, err
 	}
 
 	return user, nil
+}
+
+func (s *userService) GoogleOauth(email string) error {
+	return s.userRepository.GoogleOauth(email)
+}
+
+func (s *userService) RequireOauth(email string) (*domain.User, error) {
+	user, err := s.userRepository.RequireOauth(email)
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
+func (s *userService) ForgotPassword(email, newPassword string) error {
+	if err := s.validator.Var(email, "required,email"); err != nil {
+		return errors.New("Invalid format in Email")
+	}
+
+	if err := s.validator.Var(newPassword, "required,min=6"); err != nil {
+		return errors.New("Invalid password format")
+	}
+
+	user, err := s.userRepository.GetUserByEmail(email)
+	if err != nil {
+		return errors.New("User not found")
+	}
+
+	// Hash kata sandi baru
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), 10)
+	if err != nil {
+		return errors.New("Failed to hash new password")
+	}
+
+	// Simpan kata sandi baru yang sudah di-hash
+	err = s.userRepository.UpdatePassword(user.ID, string(hashedPassword))
+	if err != nil {
+		return errors.New("Failed to update password")
+	}
+
+	return nil
 }
 
 func (s *userService) GetUserByID(id interface{}) (*domain.User, error) {
@@ -127,6 +189,22 @@ func (s *userService) GetUserByID(id interface{}) (*domain.User, error) {
 }
 
 func (s *userService) FindAllUsers() ([]*domain.User, error) {
+	// test google calendar
+	// event, err := helper.CreateGoogleCalendarEvent(
+	// 	userEmail,                        // user email
+	// 	"New Task Due Date",              // summary
+	// 	"Task description",               // description
+	// 	"2024-06-15T09:00:00Z",           // startDateTime
+	// 	"2024-06-15T17:00:00Z",           // endDateTime
+	// 	"UTC",                            // timeZone
+	// 	[]string{"attendee@example.com"}, // attendees
+	// )
+	// if err != nil {
+	// 	log.Printf("Error creating Google Calendar event: %v", err)
+	// } else {
+	// 	log.Printf("Event created: %s", event.HtmlLink)
+	// }
+
 	return s.userRepository.FindAll()
 }
 

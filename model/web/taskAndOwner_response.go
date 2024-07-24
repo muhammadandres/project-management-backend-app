@@ -40,6 +40,7 @@ func CreateResponseTask(taskModel *domain.Task) WebResponse {
 		Code:    200,
 		Message: "Success",
 		Data: domain.Task{
+
 			ID:                  taskModel.ID,
 			OwnerID:             taskModel.OwnerID,
 			Owner:               taskModel.Owner,
@@ -66,6 +67,7 @@ func CreateResponseTasks(tasksModel []*domain.Task) []WebResponse {
 			Code:    200,
 			Message: "Success",
 			Data: domain.Task{
+				BoardID:             taskModel.BoardID,
 				ID:                  taskModel.ID,
 				OwnerID:             taskModel.OwnerID,
 				Owner:               taskModel.Owner,

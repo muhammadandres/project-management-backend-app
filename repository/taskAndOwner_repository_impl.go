@@ -17,7 +17,7 @@ func NewTaskAndOwnerRepository(db *gorm.DB) TaskAndOwnerRepository {
 	return &taskAndOwnerRepository{db}
 }
 
-func (t *taskAndOwnerRepository) Create(user *domain.User, task *domain.Task) (*domain.Task, *domain.Owner, error) {
+func (t *taskAndOwnerRepository) Create(user *domain.User, task *domain.Task, board *domain.Board) (*domain.Task, *domain.Owner, error) {
 	var Owner domain.Owner
 	Owner.Email = user.Email
 	Owner.UserID = user.ID
@@ -25,6 +25,10 @@ func (t *taskAndOwnerRepository) Create(user *domain.User, task *domain.Task) (*
 		return nil, nil, err
 	}
 
+	task.BoardID = board.ID
+	if task.BoardID == 0 {
+		return nil, nil, errors.New("task board id tidak ditemukan")
+	}
 	task.OwnerID = Owner.ID
 	if err := t.db.Create(&task).Error; err != nil {
 		return nil, nil, err
@@ -59,17 +63,17 @@ func (t *taskAndOwnerRepository) FindAll() ([]*domain.Task, error) {
 	var tasks []*domain.Task
 	var owners []*domain.Owner
 
-	// Mencari semua data owner
+	// Fetch all owners
 	if err := t.db.Find(&owners).Error; err != nil {
 		return nil, errors.New("Owner not found")
 	}
 
-	// Mencari semua data task dengan semua relasinya
-	if err := t.db.Preload("Manager").Preload("Employee").Preload("PlanningFile").Preload("ProjectFile").Find(&tasks).Error; err != nil {
+	// Fetch all tasks with their relations, including Board
+	if err := t.db.Preload("Manager").Preload("Employee").Preload("PlanningFile").Preload("ProjectFile").Preload("Board").Find(&tasks).Error; err != nil {
 		return nil, errors.New("Task not found")
 	}
 
-	// Mengisi informasi owner pada setiap task
+	// Fill owner information for each task
 	for _, task := range tasks {
 		for _, owner := range owners {
 			if owner.ID == task.OwnerID {
@@ -147,6 +151,29 @@ func (t *taskAndOwnerRepository) FindAllProjectFiles() ([]*domain.Task, error) {
 	}
 
 	return tasks, nil
+}
+
+func (t *taskAndOwnerRepository) GetTaskEmails(taskID uint64) (ownerEmail string, managerEmails []string, employeeEmails []string, err error) {
+	var task domain.Task
+	err = t.db.Preload("Owner").
+		Preload("Manager").
+		Preload("Employee").
+		First(&task, taskID).Error
+	if err != nil {
+		return "", nil, nil, err
+	}
+
+	ownerEmail = task.Owner.Email
+
+	for _, manager := range task.Manager {
+		managerEmails = append(managerEmails, manager.Email)
+	}
+
+	for _, employee := range task.Employee {
+		employeeEmails = append(employeeEmails, employee.Email)
+	}
+
+	return ownerEmail, managerEmails, employeeEmails, nil
 }
 
 func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manager, employee *domain.Employee, planningFile *domain.PlanningFile, projectFile *domain.ProjectFile) (*domain.Task, *domain.Manager, *domain.Employee, *domain.PlanningFile, *domain.ProjectFile, error) {
@@ -614,6 +641,26 @@ func (t *taskAndOwnerRepository) Delete(taskID uint) (*gorm.DB, int64, int64, in
 		countProjectFile  int64
 	)
 
+	// Hapus referensi di tabel task_employees terlebih dahulu
+	if err := t.db.Exec("DELETE FROM task_employees WHERE task_id = ?", taskID).Error; err != nil {
+		return nil, 0, 0, 0, 0, 0, fmt.Errorf("gagal menghapus referensi di task_employees: %v", err)
+	}
+
+	// Hapus referensi di tabel task_managers
+	if err := t.db.Exec("DELETE FROM task_managers WHERE task_id = ?", taskID).Error; err != nil {
+		return nil, 0, 0, 0, 0, 0, fmt.Errorf("gagal menghapus referensi di task_managers: %v", err)
+	}
+
+	// Hapus referensi di tabel task_planning_files
+	if err := t.db.Exec("DELETE FROM task_planning_files WHERE task_id = ?", taskID).Error; err != nil {
+		return nil, 0, 0, 0, 0, 0, fmt.Errorf("gagal menghapus referensi di task_planning_files: %v", err)
+	}
+
+	// Hapus referensi di tabel task_project_files
+	if err := t.db.Exec("DELETE FROM task_project_files WHERE task_id = ?", taskID).Error; err != nil {
+		return nil, 0, 0, 0, 0, 0, fmt.Errorf("gagal menghapus referensi di task_project_files: %v", err)
+	}
+
 	// Validasi owners
 	var ownerIDs []uint64
 	rows, err := t.db.Table("tasks").Select("tasks.owner_id").Joins("INNER JOIN owners ON owners.id = tasks.owner_id").Where("tasks.id = ?", taskID).Rows()
@@ -644,7 +691,6 @@ func (t *taskAndOwnerRepository) Delete(taskID uint) (*gorm.DB, int64, int64, in
 
 	// Validasi manager
 	var taskManagerIDs []uint
-	// menggunakan taskmanagersQuery.Table untuk count, karena tidak bisa pluck manager_id, dikarenakan tidak ada model dari query ini
 	rows, err = t.db.Raw("SELECT manager_id FROM task_managers WHERE task_id = ?", taskID).Rows()
 	if err != nil {
 		return nil, 0, 0, 0, 0, 0, fmt.Errorf("failed to retrieve task manager IDs: %v", err)
@@ -660,11 +706,6 @@ func (t *taskAndOwnerRepository) Delete(taskID uint) (*gorm.DB, int64, int64, in
 	}
 
 	if len(taskManagerIDs) > 0 {
-		taskmanagersDelete := "DELETE FROM task_managers WHERE task_id = ?"
-		if err := t.db.Exec(taskmanagersDelete, taskID).Error; err != nil {
-			return nil, 0, 0, 0, 0, 0, err
-		}
-
 		managersDelete := "DELETE FROM managers WHERE id IN (?)"
 		if err := t.db.Exec(managersDelete, taskManagerIDs).Error; err != nil {
 			return nil, 0, 0, 0, 0, 0, err
@@ -674,7 +715,6 @@ func (t *taskAndOwnerRepository) Delete(taskID uint) (*gorm.DB, int64, int64, in
 
 	// Validasi employee
 	var taskEmployeeIDs []uint
-	// menggunakan taskEmployeesQuery.Table untuk count, karena tidak bisa pluck employee_id, dikarenakan tidak ada model dari query ini
 	rows, err = t.db.Raw("SELECT employee_id FROM task_employees WHERE task_id = ?", taskID).Rows()
 	if err != nil {
 		return nil, 0, 0, 0, 0, 0, fmt.Errorf("failed to retrieve task employee IDs: %v", err)
@@ -684,17 +724,12 @@ func (t *taskAndOwnerRepository) Delete(taskID uint) (*gorm.DB, int64, int64, in
 	for rows.Next() {
 		var employeeID uint64
 		if err := rows.Scan(&employeeID); err != nil {
-			return nil, 0, 0, 0, 0, 0, fmt.Errorf("failed to read project file ID: %v", err)
+			return nil, 0, 0, 0, 0, 0, fmt.Errorf("failed to read employee ID: %v", err)
 		}
 		taskEmployeeIDs = append(taskEmployeeIDs, uint(employeeID))
 	}
 
 	if len(taskEmployeeIDs) > 0 {
-		taskEmployeesDelete := "DELETE FROM task_employees WHERE task_id = ?"
-		if err := t.db.Exec(taskEmployeesDelete, taskID).Error; err != nil {
-			return nil, 0, 0, 0, 0, 0, err
-		}
-
 		employeesDelete := "DELETE FROM employees WHERE id IN (?)"
 		if err := t.db.Exec(employeesDelete, taskEmployeeIDs).Error; err != nil {
 			return nil, 0, 0, 0, 0, 0, err
@@ -704,7 +739,6 @@ func (t *taskAndOwnerRepository) Delete(taskID uint) (*gorm.DB, int64, int64, in
 
 	// validasi PlanningFile
 	var taskPlanningFileIDs []uint
-	// Eksekusi query untuk mengambil planning_file_id
 	rows, err = t.db.Raw("SELECT planning_file_id FROM task_planning_files WHERE task_id = ?", taskID).Rows()
 	if err != nil {
 		return nil, 0, 0, 0, 0, 0, fmt.Errorf("failed to retrieve task planning files IDs: %v", err)
@@ -714,17 +748,12 @@ func (t *taskAndOwnerRepository) Delete(taskID uint) (*gorm.DB, int64, int64, in
 	for rows.Next() {
 		var planningFileID uint64
 		if err := rows.Scan(&planningFileID); err != nil {
-			return nil, 0, 0, 0, 0, 0, fmt.Errorf("failed to read project file ID: %v", err)
+			return nil, 0, 0, 0, 0, 0, fmt.Errorf("failed to read planning file ID: %v", err)
 		}
 		taskPlanningFileIDs = append(taskPlanningFileIDs, uint(planningFileID))
 	}
 
 	if len(taskPlanningFileIDs) > 0 {
-		taskPlanningFileDelete := "DELETE FROM task_planning_files WHERE task_id = ?"
-		if err := t.db.Exec(taskPlanningFileDelete, taskID).Error; err != nil {
-			return nil, 0, 0, 0, 0, 0, err
-		}
-
 		planningFileDelete := "DELETE FROM planning_files WHERE id IN (?)"
 		if err := t.db.Exec(planningFileDelete, taskPlanningFileIDs).Error; err != nil {
 			return nil, 0, 0, 0, 0, 0, err
@@ -734,14 +763,12 @@ func (t *taskAndOwnerRepository) Delete(taskID uint) (*gorm.DB, int64, int64, in
 
 	// validasi ProjectFile
 	var taskProjectFileIDs []uint
-	// Eksekusi query untuk mengambil project_file_id
 	rows, err = t.db.Raw("SELECT project_file_id FROM task_project_files WHERE task_id = ?", taskID).Rows()
 	if err != nil {
 		return nil, 0, 0, 0, 0, 0, fmt.Errorf("failed to retrieve task project files IDs: %v", err)
 	}
-	defer rows.Close() // Pastikan rows ditutup dengan benar
+	defer rows.Close()
 
-	// looping hasil query dalam rows yang datanya adalah nilai actual dari project_file_id, kemdian simpan ke dalam projectFileID
 	for rows.Next() {
 		var projectFileID uint64
 		if err := rows.Scan(&projectFileID); err != nil {
@@ -751,13 +778,6 @@ func (t *taskAndOwnerRepository) Delete(taskID uint) (*gorm.DB, int64, int64, in
 	}
 
 	if len(taskProjectFileIDs) > 0 {
-		// Hapus task_project_files jika ada
-		taskProjectFileDelete := "DELETE FROM task_project_files WHERE task_id = ?"
-		if err := t.db.Exec(taskProjectFileDelete, taskID).Error; err != nil {
-			return nil, 0, 0, 0, 0, 0, err
-		}
-
-		// Hapus project_files menggunakan klausa IN
 		projectFileDelete := "DELETE FROM project_files WHERE id IN (?)"
 		if err := t.db.Exec(projectFileDelete, taskProjectFileIDs).Error; err != nil {
 			return nil, 0, 0, 0, 0, 0, err

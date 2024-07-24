@@ -19,22 +19,50 @@ func NewTaskController(taskAndOwnerService service.TaskAndOwnerService) *TaskAnd
 }
 
 func (t *TaskAndOwnerController) CreateTaskAndOwner(ctx *fiber.Ctx) error {
-	userCtx := ctx.Locals("user")
 	var user *domain.User
-	// melakukan type assertion untuk mengkonversi user yang tipe datanya sudah menjadi interface{} ke *domain.user, agar dapat mengakses data user.
-	user = userCtx.(*domain.User)
+	userCtx := ctx.Locals("user")
+	if userCtx != nil {
+		var ok bool
+		// melakukan type assertion untuk mengkonversi user yang tipe datanya sudah menjadi interface{} ke *domain.user, agar dapat mengakses data user.
+		user, ok = userCtx.(*domain.User)
+		if !ok {
+			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Invalid user data"})
+		}
+	}
+
+	userOauth := ctx.Locals("userOauth")
+	if userOauth != nil {
+		var ok bool
+		user, ok = userOauth.(*domain.User)
+		if !ok {
+			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Invalid OAuth user data"})
+		}
+	}
+
+	// Ambil board ID terbaru dari cookie
+	latestBoardIDStr := ctx.Cookies("LatestBoardID")
+	if latestBoardIDStr == "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "No board has been created yet"})
+	}
+
+	latestBoardID, err := strconv.ParseUint(latestBoardIDStr, 10, 64)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Invalid board ID in cookie"})
+	}
+
+	board := &domain.Board{ID: latestBoardID}
 
 	// name_task
-	var task domain.Task
 	nameTask := ctx.FormValue("name_task")
-	task.NameTask = nameTask
+	task := &domain.Task{NameTask: nameTask}
 
-	taskDB, ownerDB, err := t.taskAndOwnerService.CreateTaskAndOwner(user, &task)
+	taskDB, ownerDB, err := t.taskAndOwnerService.CreateTaskAndOwner(user, task, board)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	type CreateResponse struct {
+		BoardId   uint64 `json:"board_id"`
 		TaskID    uint64 `json:"task_id"`
 		NameTask  string `json:"name_task"`
 		OwnerID   uint64 `json:"owner_id"`
@@ -46,6 +74,7 @@ func (t *TaskAndOwnerController) CreateTaskAndOwner(ctx *fiber.Ctx) error {
 		Code:    200,
 		Message: "Success",
 		Data: CreateResponse{
+			BoardId:   taskDB.BoardID,
 			TaskID:    taskDB.ID,
 			NameTask:  taskDB.NameTask,
 			OwnerID:   ownerDB.ID,
@@ -249,6 +278,176 @@ func (t *TaskAndOwnerController) GetAllProjectFiles(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(response)
 }
 
+// func (t *TaskAndOwnerController) UpdateTaskAndOwner(ctx *fiber.Ctx) error {
+// 	var (
+// 		task         domain.Task
+// 		planningFile domain.PlanningFile
+// 		projectFile  domain.ProjectFile
+// 		manager      domain.Manager
+// 		employee     domain.Employee
+// 	)
+
+// 	// user yang sedang login
+// 	userID, err := helper.GetCtxLocals(ctx)
+// 	if err != nil {
+// 		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": err.Error()})
+// 	}
+
+// 	// task id
+// 	taskId := ctx.Params("id")
+// 	taskIdUint64, err := strconv.ParseUint(taskId, 10, 64)
+// 	if err != nil {
+// 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid task Id"})
+// 	}
+
+// 	// manager
+// 	managerEmail := ctx.FormValue("manager")
+// 	if managerEmail != "" {
+// 		if err := t.taskAndOwnerService.UpdateValidationOwner(uint(taskIdUint64), uint(userID)); err != nil {
+// 			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+// 		}
+// 		manager.Email = managerEmail
+// 	}
+
+// 	// employee
+// 	employeeEmail := ctx.FormValue("employee")
+// 	if employeeEmail != "" {
+// 		if err := t.taskAndOwnerService.UpdateValidationManager(uint(taskIdUint64), uint(userID)); err != nil {
+// 			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+// 		}
+// 		employee.Email = employeeEmail
+// 	}
+
+// 	// planning file
+// 	planningFiles, err := ctx.FormFile("planning_file")
+// 	// Validasi dengan UpdateTaskAndOwnerValidationForManager jika planning file diunggah terlebih dahulu
+// 	if planningFiles != nil {
+// 		if err := t.taskAndOwnerService.UpdateValidationManager(uint(taskIdUint64), uint(userID)); err != nil {
+// 			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+// 		}
+// 		manager.Email = managerEmail
+
+// 		if err == nil {
+// 			PlanningFileUrl, PlanningFileName, err := helper.SetupS3Uploader(planningFiles)
+// 			if err != nil {
+// 				return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error uploading planning file" + err.Error()})
+// 			}
+// 			planningFile.FileUrl = PlanningFileUrl
+// 			planningFile.FileName = PlanningFileName
+// 		}
+// 		if err != nil {
+// 			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error uploading project file" + err.Error()})
+// 		}
+// 	}
+
+// 	// project file
+// 	projectFiles, err := ctx.FormFile("project_file")
+// 	// Validasi dengan UpdateTaskAndOwnerValidationForEmployee jika project file diunggah terlebih dahulu
+// 	if projectFiles != nil {
+// 		if err := t.taskAndOwnerService.UpdateValidationEmployee(uint(taskIdUint64), uint(userID)); err != nil {
+// 			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+// 		}
+// 		manager.Email = managerEmail
+
+// 		if err == nil {
+// 			ProjectFileUrl, ProjectFileName, err := helper.SetupS3Uploader(projectFiles)
+// 			if err != nil {
+// 				return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error uploading project file" + err.Error()})
+// 			}
+// 			projectFile.FileUrl = ProjectFileUrl
+// 			projectFile.FileName = ProjectFileName
+// 		}
+// 		if err != nil {
+// 			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error uploading project file" + err.Error()})
+// 		}
+// 	}
+
+// 	// field yang tidak berelasi pada task
+// 	nameTask := ctx.FormValue("name_task")
+// 	if nameTask != "" {
+// 		if err := t.taskAndOwnerService.UpdateValidationOwner(uint(taskIdUint64), uint(userID)); err != nil {
+// 			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+// 		}
+// 		manager.Email = managerEmail
+
+// 	}
+
+// 	planningDescription := ctx.FormValue("planning_description")
+// 	if planningDescription != "" {
+// 		if err := t.taskAndOwnerService.UpdateValidationOwner(uint(taskIdUint64), uint(userID)); err != nil {
+// 			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+// 		}
+// 		manager.Email = managerEmail
+
+// 	}
+
+// 	planningStatus := ctx.FormValue("planning_status")
+// 	if planningStatus != "" {
+// 		if err := t.taskAndOwnerService.UpdateValidationOwner(uint(taskIdUint64), uint(userID)); err != nil {
+// 			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+// 		}
+// 		manager.Email = managerEmail
+
+// 	}
+
+// 	projectStatus := ctx.FormValue("project_status")
+// 	if projectStatus != "" {
+// 		if err := t.taskAndOwnerService.UpdateValidationOwner(uint(taskIdUint64), uint(userID)); err != nil {
+// 			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+// 		}
+// 		manager.Email = managerEmail
+
+// 	}
+
+// 	planningDueDate := ctx.FormValue("planning_due_date")
+// 	if planningDueDate != "" {
+// 		if err := t.taskAndOwnerService.UpdateValidationOwner(uint(taskIdUint64), uint(userID)); err != nil {
+// 			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+// 		}
+// 		manager.Email = managerEmail
+
+// 	}
+
+// 	projectDueDate := ctx.FormValue("project_due_date")
+// 	if projectDueDate != "" {
+// 		if err := t.taskAndOwnerService.UpdateValidationOwner(uint(taskIdUint64), uint(userID)); err != nil {
+// 			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+// 		}
+// 		manager.Email = managerEmail
+
+// 	}
+
+// 	priority := ctx.FormValue("priority")
+// 	if priority != "" {
+// 		if err := t.taskAndOwnerService.UpdateValidationManager(uint(taskIdUint64), uint(userID)); err != nil {
+// 			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+// 		}
+// 		manager.Email = managerEmail
+
+// 	}
+
+// 	projectComment := ctx.FormValue("project_comment")
+// 	if projectComment != "" {
+// 		if err := t.taskAndOwnerService.UpdateValidationEmployee(uint(taskIdUint64), uint(userID)); err != nil {
+// 			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+// 		}
+// 		manager.Email = managerEmail
+
+// 	}
+
+// 	// save
+// 	response, err := t.taskAndOwnerService.UpdateTaskAndOwner(&task, &manager, &employee, &planningFile, &projectFile, uint(taskIdUint64))
+// 	if err != nil {
+// 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+// 	}
+
+// 	return ctx.Status(fiber.StatusOK).JSON(web.WebResponse{
+// 		Code:    200,
+// 		Message: "Success",
+// 		Data:    response,
+// 	})
+// }
+
 func (t *TaskAndOwnerController) UpdateTaskAndOwner(ctx *fiber.Ctx) error {
 	var (
 		task         domain.Task
@@ -262,11 +461,18 @@ func (t *TaskAndOwnerController) UpdateTaskAndOwner(ctx *fiber.Ctx) error {
 	user := ctx.Locals("user")
 	userID := user.(*domain.User).ID
 
+	// board id
+	boardId := ctx.Params("boardId")
+	boardIdUint64, err := strconv.ParseUint(boardId, 10, 64)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid board Id"})
+	}
+
 	// task id
-	taskId := ctx.Params("id")
+	taskId := ctx.Params("taskId")
 	taskIdUint64, err := strconv.ParseUint(taskId, 10, 64)
 	if err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid task Id"})
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	// manager
@@ -367,7 +573,7 @@ func (t *TaskAndOwnerController) UpdateTaskAndOwner(ctx *fiber.Ctx) error {
 		task.ProjectStatus = projectStatus
 	}
 
-	planningDueDate := ctx.FormValue("planning_due_date")
+	planningDueDate := ctx.FormValue("project_status")
 	if planningDueDate != "" {
 		if err := t.taskAndOwnerService.UpdateValidationOwner(uint(taskIdUint64), uint(userID)); err != nil {
 			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
@@ -400,7 +606,7 @@ func (t *TaskAndOwnerController) UpdateTaskAndOwner(ctx *fiber.Ctx) error {
 	}
 
 	// save
-	response, err := t.taskAndOwnerService.UpdateTaskAndOwner(&task, &manager, &employee, &planningFile, &projectFile, uint(taskIdUint64))
+	response, err := t.taskAndOwnerService.UpdateTaskAndOwner(&task, &manager, &employee, &planningFile, &projectFile, uint(taskIdUint64), uint(boardIdUint64))
 	if err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -413,40 +619,52 @@ func (t *TaskAndOwnerController) UpdateTaskAndOwner(ctx *fiber.Ctx) error {
 }
 
 func (t *TaskAndOwnerController) DeleteManager(ctx *fiber.Ctx) error {
-	user := ctx.Locals("user")
-	userId := user.(*domain.User).ID
+	var userId, userOauthId uint64
+
+	if user := ctx.Locals("user"); user != nil {
+		if u, ok := user.(*domain.User); ok {
+			userId = u.ID
+		}
+	}
+
+	if userOauth := ctx.Locals("userOauth"); userOauth != nil {
+		if u, ok := userOauth.(*domain.User); ok {
+			userOauthId = u.ID
+		}
+	}
 
 	taskId := ctx.Params("id")
 	taskIdUint64, err := strconv.ParseUint(taskId, 10, 64)
 	if err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid file Id"})
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid task Id"})
 	}
 
 	managerId := ctx.Params("manager_id")
 	managerIdUint64, err := strconv.ParseUint(managerId, 10, 64)
 	if err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid task Id"})
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid manager Id"})
 	}
 
 	if userId != 0 && taskId != "" {
 		if err := t.taskAndOwnerService.UpdateValidationOwner(uint(taskIdUint64), uint(userId)); err != nil {
 			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 		}
+	} else if userOauthId != 0 && taskId != "" {
+		if err := t.taskAndOwnerService.UpdateValidationOwner(uint(taskIdUint64), uint(userOauthId)); err != nil {
+			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		}
 	} else {
-		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "task dan manager id is required"})
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "task and manager id are required"})
 	}
 
 	if err := t.taskAndOwnerService.DeleteManager(uint(taskIdUint64), uint(managerIdUint64)); err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{"message": "File deleted successfully"})
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Manager deleted successfully"})
 }
 
 func (t *TaskAndOwnerController) DeleteEmployee(ctx *fiber.Ctx) error {
-	user := ctx.Locals("user")
-	userId := user.(*domain.User).ID
-
 	taskId := ctx.Params("id")
 	taskIdUint64, err := strconv.ParseUint(taskId, 10, 64)
 	if err != nil {
@@ -456,27 +674,56 @@ func (t *TaskAndOwnerController) DeleteEmployee(ctx *fiber.Ctx) error {
 	employeeId := ctx.Params("employee_id")
 	employeeIdUint64, err := strconv.ParseUint(employeeId, 10, 64)
 	if err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid file Id"})
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid employee Id"})
 	}
 
-	if userId != 0 && taskId != "" {
-		if err := t.taskAndOwnerService.UpdateValidationManager(uint(taskIdUint64), uint(userId)); err != nil {
-			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	// Check for user authentication
+	var authenticatedUserId uint
+	if user := ctx.Locals("user"); user != nil {
+		if u, ok := user.(*domain.User); ok {
+			authenticatedUserId = uint(u.ID)
 		}
-	} else {
-		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "task and employee id is required"})
 	}
 
+	if userOauth := ctx.Locals("userOauth"); userOauth != nil {
+		if u, ok := userOauth.(*domain.User); ok {
+			authenticatedUserId = uint(u.ID)
+		}
+	}
+
+	if authenticatedUserId == 0 {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "User not authenticated"})
+	}
+
+	// Validate manager
+	if err := t.taskAndOwnerService.UpdateValidationManager(uint(taskIdUint64), authenticatedUserId); err != nil {
+		return ctx.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	// Delete employee
 	if err := t.taskAndOwnerService.DeleteEmployee(uint(taskIdUint64), uint(employeeIdUint64)); err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{"message": "File deleted successfully"})
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Employee deleted successfully"})
 }
 
 func (t *TaskAndOwnerController) DeletePlanningFile(ctx *fiber.Ctx) error {
-	user := ctx.Locals("user")
-	userId := user.(*domain.User).ID
+	var authenticatedUserId uint64
+
+	if user := ctx.Locals("user"); user != nil {
+		if u, ok := user.(*domain.User); ok {
+			authenticatedUserId = u.ID
+		}
+	} else if userOauth := ctx.Locals("userOauth"); userOauth != nil {
+		if u, ok := userOauth.(*domain.User); ok {
+			authenticatedUserId = u.ID
+		}
+	}
+
+	if authenticatedUserId == 0 {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "User not authenticated"})
+	}
 
 	taskId := ctx.Params("id")
 	taskIdUint64, err := strconv.ParseUint(taskId, 10, 64)
@@ -490,12 +737,9 @@ func (t *TaskAndOwnerController) DeletePlanningFile(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid file Id"})
 	}
 
-	if userId != 0 && taskId != "" {
-		if err := t.taskAndOwnerService.UpdateValidationManager(uint(taskIdUint64), uint(userId)); err != nil {
-			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
-		}
-	} else {
-		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "task and file id is required"})
+	// Validate manager
+	if err := t.taskAndOwnerService.UpdateValidationManager(uint(taskIdUint64), uint(authenticatedUserId)); err != nil {
+		return ctx.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	fileName, err := t.taskAndOwnerService.DeletePlanningFile(uint(fileIdUint64))
@@ -503,25 +747,34 @@ func (t *TaskAndOwnerController) DeletePlanningFile(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	// aws s3
+	// AWS S3 delete
 	err = helper.SetupS3Delete(fileName)
 	if err != nil {
-		// Periksa tipe error untuk penanganan khusus
-		switch err.(type) {
-		case error: // pesan error yang bertipe error di ambil dari fmt.Errorf
+		if _, ok := err.(error); ok {
 			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-		default:
-			// pesan error yang bukan bertipe error di ambil dari errors.New
-			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 		}
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{"message": "File deleted successfully"})
 }
 
 func (t *TaskAndOwnerController) DeleteProjectFile(ctx *fiber.Ctx) error {
-	user := ctx.Locals("user")
-	userId := user.(*domain.User).ID
+	var authenticatedUserId uint64
+
+	if user := ctx.Locals("user"); user != nil {
+		if u, ok := user.(*domain.User); ok {
+			authenticatedUserId = u.ID
+		}
+	} else if userOauth := ctx.Locals("userOauth"); userOauth != nil {
+		if u, ok := userOauth.(*domain.User); ok {
+			authenticatedUserId = u.ID
+		}
+	}
+
+	if authenticatedUserId == 0 {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "User not authenticated"})
+	}
 
 	taskId := ctx.Params("id")
 	taskIdUint64, err := strconv.ParseUint(taskId, 10, 64)
@@ -535,12 +788,9 @@ func (t *TaskAndOwnerController) DeleteProjectFile(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid file Id"})
 	}
 
-	if userId != 0 && taskId != "" {
-		if err := t.taskAndOwnerService.UpdateValidationEmployee(uint(taskIdUint64), uint(userId)); err != nil {
-			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
-		}
-	} else {
-		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "task and file id is required"})
+	// Validate employee
+	if err := t.taskAndOwnerService.UpdateValidationEmployee(uint(taskIdUint64), uint(authenticatedUserId)); err != nil {
+		return ctx.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	fileName, err := t.taskAndOwnerService.DeleteProjectFile(uint(fileIdUint64))
@@ -548,17 +798,13 @@ func (t *TaskAndOwnerController) DeleteProjectFile(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	// aws s3
+	// AWS S3 delete
 	err = helper.SetupS3Delete(fileName)
 	if err != nil {
-		// Periksa tipe error untuk penanganan khusus
-		switch err.(type) {
-		case error: // pesan error yang bertipe error di ambil dari fmt.Errorf
+		if _, ok := err.(error); ok {
 			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-		default:
-			// pesan error yang bukan bertipe error di ambil dari errors.New
-			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 		}
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{"message": "File deleted successfully"})
@@ -571,15 +817,34 @@ func (t *TaskAndOwnerController) DeleteTaskAndOwner(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid task Id"})
 	}
 
-	user := ctx.Locals("user")
-	userID := user.(*domain.User).ID
+	var userId, userOauthId uint64
 
-	if taskId != "" && userID != 0 {
-		if err := t.taskAndOwnerService.UpdateValidationOwner(uint(taskIdUint64), uint(userID)); err != nil {
+	if user := ctx.Locals("user"); user != nil {
+		if u, ok := user.(*domain.User); ok {
+			userId = u.ID
+		}
+	}
+
+	if userOauth := ctx.Locals("userOauth"); userOauth != nil {
+		if u, ok := userOauth.(*domain.User); ok {
+			userOauthId = u.ID
+		}
+	}
+
+	if taskId == "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "task id is required"})
+	}
+
+	if userId != 0 {
+		if err := t.taskAndOwnerService.UpdateValidationOwner(uint(taskIdUint64), uint(userId)); err != nil {
+			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		}
+	} else if userOauthId != 0 {
+		if err := t.taskAndOwnerService.UpdateValidationOwner(uint(taskIdUint64), uint(userOauthId)); err != nil {
 			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 		}
 	} else {
-		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "task and file id is required"})
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "User authentication is required"})
 	}
 
 	if err := t.taskAndOwnerService.DeleteTaskAndOwner(uint(taskIdUint64)); err != nil {

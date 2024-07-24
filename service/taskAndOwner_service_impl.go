@@ -2,40 +2,34 @@ package service
 
 import (
 	"errors"
-	"fmt"
-	"github.com/go-playground/validator/v10"
 	"manajemen_tugas_master/helper"
 	"manajemen_tugas_master/model/domain"
 	"manajemen_tugas_master/model/web"
 	"manajemen_tugas_master/repository"
+
+	"github.com/go-playground/validator/v10"
 )
 
 type taskAndOwnerService struct {
 	taskAndOwnerRepository repository.TaskAndOwnerRepository
+	boardRepository        repository.BoardRepository
 	validator              *validator.Validate
 }
 
-func NewTaskAndOwnerService(taskAndOwnerRepository repository.TaskAndOwnerRepository, validator *validator.Validate) TaskAndOwnerService {
-	return &taskAndOwnerService{taskAndOwnerRepository, validator}
+func NewTaskAndOwnerService(taskAndOwnerRepository repository.TaskAndOwnerRepository, boardRepository repository.BoardRepository, validator *validator.Validate) TaskAndOwnerService {
+	return &taskAndOwnerService{taskAndOwnerRepository, boardRepository, validator}
 }
 
-func (t *taskAndOwnerService) CreateTaskAndOwner(user *domain.User, task *domain.Task) (*domain.Task, *domain.Owner, error) {
-	//if err := t.validator.Struct(task); err != nil {
-	//	var errMsg string
-	//	validationErrors := err.(validator.ValidationErrors)
-	//	for _, fieldError := range validationErrors {
-	//		errMsg += fmt.Sprintf("Invalid request body format in %s, because field %s is %s\n",
-	//			fieldError.Namespace(), fieldError.Field(), fieldError.Tag(),
-	//		)
-	//	}
-	//	return errors.New(errMsg)
-	//}
-
+func (t *taskAndOwnerService) CreateTaskAndOwner(user *domain.User, task *domain.Task, board *domain.Board) (*domain.Task, *domain.Owner, error) {
 	if task.NameTask == "" {
 		return nil, nil, errors.New("Masukkan nama task terlebih dahulu")
 	}
 
-	taskDB, ownerDB, err := t.taskAndOwnerRepository.Create(user, task)
+	if board.ID == 0 {
+		return nil, nil, errors.New("latestBoardID tidak ditemukan")
+	}
+
+	taskDB, ownerDB, err := t.taskAndOwnerRepository.Create(user, task, board)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -71,12 +65,170 @@ func (t *taskAndOwnerService) FindAllProjectFiles() ([]*domain.Task, error) {
 	return t.taskAndOwnerRepository.FindAllProjectFiles()
 }
 
-func (t *taskAndOwnerService) UpdateTaskAndOwner(task *domain.Task, manager *domain.Manager, employee *domain.Employee, planningFile *domain.PlanningFile, projectFile *domain.ProjectFile, taskID uint) (*web.UpdateResponse, error) {
+// func (t *taskAndOwnerService) UpdateTaskAndOwner(task *domain.Task, manager *domain.Manager, employee *domain.Employee, planningFile *domain.PlanningFile, projectFile *domain.ProjectFile, taskID uint) (*web.UpdateResponse, error) {
+// 	taskDB, err := t.taskAndOwnerRepository.FindById(taskID)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	// Update task dengan data dari database
+// 	task.ID = taskDB.ID
+// 	task.OwnerID = taskDB.OwnerID
+
+// 	updateTask, updateManager, updateEmployee, updatePlanningFile, updateProjectFile, err := t.taskAndOwnerRepository.Update(task, manager, employee, planningFile, projectFile)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	// Persiapan respons
+// 	response := &web.UpdateResponse{}
+
+// 	// Populate response dengan data dari updateTask
+// 	response.NameTask = updateTask.NameTask
+// 	if updateTask.PlanningDescription != "" {
+// 		response.PlanningDescription = updateTask.PlanningDescription
+// 	}
+
+// 	if updateTask.PlanningStatus != "approved" {
+// 		// bodyText := fmt.Sprintf("status planning status di task :%v adalah %v", updateTask.NameTask, "approved")
+// 		// task, _ := t.taskAndOwnerRepository.FindById(uint(taskDB.ID))
+// 		// var managerEmails []string
+// 		// for _, manager := range task.Manager {
+// 		// 	managerEmails = append(managerEmails, manager.Email)
+// 		// }
+// 		// helper.SetupSES(managerEmails, "planning status", bodyText)
+// 		response.PlanningStatus = updateTask.PlanningStatus
+// 	}
+// 	if updateTask.PlanningStatus != "not approved" {
+// 		// bodyText := fmt.Sprintf("status planning status di task :%v adalah %v", updateTask.NameTask, "not approved")
+// 		// task, _ := t.taskAndOwnerRepository.FindById(uint(taskDB.ID))
+// 		// var managerEmails []string
+// 		// for _, manager := range task.Manager {
+// 		// 	managerEmails = append(managerEmails, manager.Email)
+// 		// }
+// 		// helper.SetupSES(managerEmails, "planning status", bodyText)
+// 		response.PlanningStatus = updateTask.PlanningStatus
+// 	}
+// 	if updateTask.ProjectStatus != "done" {
+// 		// bodyText := fmt.Sprintf("status project status di task :%v adalah %v", updateTask.NameTask, "done")
+// 		// task, _ := t.taskAndOwnerRepository.FindById(uint(taskDB.ID))
+// 		// var employeeEmails []string
+// 		// for _, employee := range task.Employee {
+// 		// 	employeeEmails = append(employeeEmails, employee.Email)
+// 		// }
+// 		// helper.SetupSES(employeeEmails, "project status", bodyText)
+// 		response.ProjectStatus = updateTask.ProjectStatus
+// 	}
+// 	if updateTask.ProjectStatus != "undone" {
+// 		// bodyText := fmt.Sprintf("status project status di task :%v adalah %v", updateTask.NameTask, "undone")
+// 		// task, _ := t.taskAndOwnerRepository.FindById(uint(taskDB.ID))
+// 		// var employeeEmails []string
+// 		// for _, employee := range task.Employee {
+// 		// 	employeeEmails = append(employeeEmails, employee.Email)
+// 		// }
+// 		// helper.SetupSES(employeeEmails, "project status", bodyText)
+// 		response.ProjectStatus = updateTask.ProjectStatus
+// 	}
+// 	if updateTask.PlanningDueDate != "" {
+// 		//email
+// 		// bodyText := fmt.Sprintf("planning due date di task :%v adalah %v", updateTask.NameTask, updateTask.PlanningDueDate)
+// 		// task, _ := t.taskAndOwnerRepository.FindById(uint(taskDB.ID))
+// 		// var managerEmails []string
+// 		// for _, manager := range task.Manager {
+// 		// 	managerEmails = append(managerEmails, manager.Email)
+// 		// }
+// 		// helper.SetupSES(managerEmails, "planning due date", bodyText)
+
+// 		// //calendar
+// 		// event, err := helper.CreateGoogleCalendarEvent(
+// 		// 	managerEmails[0],       // user email (assuming the first manager's email for the calendar service)
+// 		// 	"New Task Due Date",    // summary
+// 		// 	bodyText,               // description (reusing the bodyText for description)
+// 		// 	"2024-06-15T09:00:00Z", // startDateTime
+// 		// 	"2024-06-15T17:00:00Z", // endDateTime
+// 		// 	"UTC",                  // timeZone
+// 		// 	managerEmails,          // attendees
+// 		// )
+// 		// if err != nil {
+// 		// 	log.Printf("Error creating Google Calendar event: %v", err)
+// 		// } else {
+// 		// 	log.Printf("Event created: %s", event.HtmlLink)
+// 		// }
+// 		response.PlanningDueDate = updateTask.PlanningDueDate
+// 	}
+// 	if updateTask.ProjectDueDate != "" {
+// 		//email
+// 		// bodyText := fmt.Sprintf("project due date di task :%v adalah %v", updateTask.NameTask, updateTask.PlanningDueDate)
+// 		// task, _ := t.taskAndOwnerRepository.FindById(uint(taskDB.ID))
+// 		// var employeeEmails []string
+// 		// for _, employee := range task.Employee {
+// 		// 	employeeEmails = append(employeeEmails, employee.Email)
+// 		// }
+// 		// helper.SetupSES(employeeEmails, "project due date", bodyText)
+
+// 		// //calendar
+// 		// event, err := helper.CreateGoogleCalendarEvent(
+// 		// 	employeeEmails[0],      // user email (assuming the first manager's email for the calendar service)
+// 		// 	"New Task Due Date",    // summary
+// 		// 	bodyText,               // description (reusing the bodyText for description)
+// 		// 	"2024-06-15T09:00:00Z", // startDateTime
+// 		// 	"2024-06-15T17:00:00Z", // endDateTime
+// 		// 	"UTC",                  // timeZone
+// 		// 	employeeEmails,         // attendees
+// 		// )
+// 		// if err != nil {
+// 		// 	log.Printf("Error creating Google Calendar event: %v", err)
+// 		// } else {
+// 		// 	log.Printf("Event created: %s", event.HtmlLink)
+// 		// }
+// 		response.ProjectDueDate = updateTask.ProjectDueDate
+// 	}
+// 	response.Priority = updateTask.Priority
+// 	response.ProjectComment = updateTask.ProjectComment
+
+// 	// Populate managerResponse dengan data dari updateManager jika tidak kosong
+// 	if updateManager.ID != 0 || updateManager.Email != "" || updateManager.UserID != 0 {
+// 		response.Manager.ID = updateManager.ID
+// 		response.Manager.Email = updateManager.Email
+// 		response.Manager.UserID = updateManager.UserID
+// 	}
+
+// 	// Populate employeeResponse dengan data dari updateEmployee jika tidak kosong
+// 	if updateEmployee.ID != 0 || updateEmployee.Email != "" || updateEmployee.UserID != 0 {
+// 		response.Employee.ID = updateEmployee.ID
+// 		response.Employee.Email = updateEmployee.Email
+// 		response.Employee.UserID = updateEmployee.UserID
+// 	}
+
+// 	// Populate planningFileResponse dengan data dari updatePlanningFile jika tidak kosong
+// 	if updatePlanningFile.ID != 0 || updatePlanningFile.FileUrl != "" || updatePlanningFile.FileName != "" {
+// 		response.PlanningFile.ID = updatePlanningFile.ID
+// 		response.PlanningFile.FileUrl = updatePlanningFile.FileUrl
+// 		response.PlanningFile.FileName = updatePlanningFile.FileName
+// 	}
+
+// 	// Populate projectFileResponse dengan data dari updateProjectFile jika tidak kosong
+// 	if updateProjectFile.ID != 0 || updateProjectFile.FileUrl != "" || updateProjectFile.FileName != "" {
+// 		response.ProjectFile.ID = updateProjectFile.ID
+// 		response.ProjectFile.FileUrl = updateProjectFile.FileUrl
+// 		response.ProjectFile.FileName = updateProjectFile.FileName
+// 	}
+
+// 	return response, nil
+// }
+
+func (t *taskAndOwnerService) UpdateTaskAndOwner(task *domain.Task, manager *domain.Manager, employee *domain.Employee, planningFile *domain.PlanningFile, projectFile *domain.ProjectFile, taskID uint, boardID uint) (*web.UpdateResponse, error) {
+	boardDB, err := t.boardRepository.FindById(uint64(boardID))
+	if err != nil {
+		return nil, err
+	}
+	// Update task dengan data dari database
+	task.BoardID = boardDB.ID
+
 	taskDB, err := t.taskAndOwnerRepository.FindById(taskID)
 	if err != nil {
 		return nil, err
 	}
-
 	// Update task dengan data dari database
 	task.ID = taskDB.ID
 	task.OwnerID = taskDB.OwnerID
@@ -93,6 +245,26 @@ func (t *taskAndOwnerService) UpdateTaskAndOwner(task *domain.Task, manager *dom
 	response.NameTask = updateTask.NameTask
 	response.PlanningDescription = updateTask.PlanningDescription
 	response.PlanningStatus = updateTask.PlanningStatus
+	// Send email if planning status is "Approved"
+	// if updateTask.PlanningStatus == "Approved" {
+	// 	ownerEmail, managerEmails, employeeEmails, err := t.taskAndOwnerRepository.GetTaskEmails(uint64(taskID))
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+
+	// 	to := []string{ownerEmail}
+	// 	to = append(to, managerEmails...)
+	// 	to = append(to, employeeEmails...)
+
+	// 	subject := "Task Planning Approved"
+	// 	body := fmt.Sprintf("The planning for task '%s' has been approved.", updateTask.NameTask)
+
+	// 	err = helper.SendEmail(nil, to, subject, body)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// }
+
 	response.ProjectStatus = updateTask.ProjectStatus
 	response.PlanningDueDate = updateTask.PlanningDueDate
 	response.ProjectDueDate = updateTask.ProjectDueDate
@@ -118,8 +290,6 @@ func (t *taskAndOwnerService) UpdateTaskAndOwner(task *domain.Task, manager *dom
 		response.PlanningFile.ID = updatePlanningFile.ID
 		response.PlanningFile.FileUrl = updatePlanningFile.FileUrl
 		response.PlanningFile.FileName = updatePlanningFile.FileName
-		bodyText := fmt.Sprintf("planning file uploaded in task :%v", updateTask.NameTask)
-		helper.SetupSES(`land45122@gmail.com`, "planning file", bodyText)
 	}
 
 	// Populate projectFileResponse dengan data dari updateProjectFile jika tidak kosong

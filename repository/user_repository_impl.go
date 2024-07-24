@@ -3,8 +3,9 @@ package repository
 import (
 	"errors"
 	"fmt"
-	"gorm.io/gorm"
 	"manajemen_tugas_master/model/domain"
+
+	"gorm.io/gorm"
 )
 
 // userRepository adalah implementasi dari UserRepository
@@ -18,26 +19,86 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 	return &userRepository{db}
 }
 
-func (r *userRepository) Signup(user *domain.User) (*domain.User, error) {
-	if err := r.db.Create(&user).Error; err != nil {
-		return nil, errors.New("Duplicate entry for user")
+func (r *userRepository) Signup(user *domain.User) error {
+	var count int64
+	r.db.First(&user, "email = ?", user.Email).Count(&count)
+	if count == 0 {
+		if err := r.db.Create(&user).Error; err != nil {
+			return fmt.Errorf("err %v", err)
+		}
 	}
-	return user, nil
+	if count > 0 {
+		return errors.New("email already exists, please login instead")
+	}
+
+	return nil
 }
 
 func (r *userRepository) Login(user *domain.User) (*domain.User, error) {
-	if err := r.db.First(&user, "email = ?", user.Email).Error; err != nil {
+	var dbUser domain.User
+	if err := r.db.First(&dbUser, "email = ?", user.Email).Error; err != nil {
 		return nil, err
 	}
-	return user, nil
+	return &dbUser, nil
+}
+
+func (r *userRepository) GoogleOauth(email string) error {
+	var user domain.User
+	var count int64
+
+	// Periksa apakah user dengan email tersebut sudah ada
+	if err := r.db.Model(&domain.User{}).Where("email = ?", email).Count(&count).Error; err != nil {
+		return err
+	}
+
+	if count == 0 {
+		// Jika user belum ada, buat user baru dengan password googleauth
+		user.Email = email
+		user.Password = "GoogleAuth"
+		if err := r.db.Create(&user).Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *userRepository) RequireOauth(email string) (*domain.User, error) {
+	var user domain.User
+	if err := r.db.First(&user, "email = ?", email).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (r *userRepository) GetUserByEmail(email string) (*domain.User, error) {
+	var user domain.User
+	if err := r.db.Where("email = ?", email).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("User not found")
+		}
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (r *userRepository) UpdatePassword(userID uint64, newPassword string) error {
+	result := r.db.Model(&domain.User{}).Where("id = ?", userID).Update("password", newPassword)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("No user found with the given ID")
+	}
+	return nil
 }
 
 func (r *userRepository) FindById(id interface{}) (*domain.User, error) {
-	var user *domain.User
+	var user domain.User
 	if err := r.db.First(&user, id).Error; err != nil {
 		return nil, err
 	}
-	return user, nil
+	return &user, nil
 }
 
 func (r *userRepository) FindAll() ([]*domain.User, error) {

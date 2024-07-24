@@ -2,12 +2,13 @@ package app
 
 import (
 	"fmt"
-	"gorm.io/driver/mysql"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 	"log"
 	"manajemen_tugas_master/model/domain"
 	"os"
+
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 func ConnectDB() (*gorm.DB, error) {
@@ -23,7 +24,11 @@ func ConnectDB() (*gorm.DB, error) {
 	log.Println("Running migrations")
 	if err := db.AutoMigrate(
 		&domain.User{},
+		&domain.Board{},
 		&domain.Task{},
+		&domain.Owner{},
+		&domain.Manager{},
+		&domain.Employee{},
 	); err != nil {
 		return nil, err
 	}

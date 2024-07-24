@@ -9,9 +9,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sesv2/types"
 )
 
-func SetupSES(Recipitent string, Subject string, TextBody string) error {
+func SetupSES(Recipients []string, Subject string, TextBody string) error {
 	sender := "m.andres.novrizal@gmail.com"
-	recipients := []string{Recipitent}
 
 	cfg, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
@@ -23,7 +22,7 @@ func SetupSES(Recipitent string, Subject string, TextBody string) error {
 	input := &sesv2.SendEmailInput{
 		FromEmailAddress: &sender,
 		Destination: &types.Destination{
-			ToAddresses: recipients,
+			ToAddresses: Recipients,
 		},
 		Content: &types.EmailContent{
 			Simple: &types.Message{
