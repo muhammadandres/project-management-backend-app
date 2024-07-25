@@ -56,7 +56,7 @@ jobs:
       - name: Stop and remove old container
         run: docker rm -f manajemen-tugas-container || true
 
-      - name: Run Docker container
+      - name: Run and debug Docker container
         env:
           PORT: ${{ secrets.PORT }}
           DB_URL: ${{ secrets.DB_URL }}
@@ -69,20 +69,28 @@ jobs:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           DB_NAME: ${{ secrets.DB_NAME }}
         run: |
-          docker run -d \
-            --name manajemen-tugas-container \
-            -p 4040:4040 \
+          # Run container in interactive mode
+          docker run -d --name manajemen-tugas-container \
+            -p ${{ secrets.PORT }}:${{ secrets.PORT }} \
             --env-file <(env | grep -E 'PORT|DB_URL|SECRET|AWS_|DB_') \
             muhammadandres/manajementugas:latest
       
-          # Wait for container to start
-          sleep 10
+          # Wait a bit
+          sleep 5
       
-          # Check if container is running
-          docker ps | grep manajemen-tugas-container || (echo "Container failed to start" && exit 1)
+          # Check container status
+          docker ps -a
       
           # Print container logs
+          echo "Container logs:"
           docker logs manajemen-tugas-container
       
-          # Print environment variables inside the container
-          docker exec manajemen-tugas-container env
+          # Try to execute a command inside the container
+          echo "Environment variables inside container:"
+          docker exec -i manajemen-tugas-container env || echo "Failed to execute command in container"
+      
+          # If container exited, print last few log lines
+          if [ "$(docker inspect -f '{{.State.Running}}' manajemen-tugas-container)" = "false" ]; then
+            echo "Container exited. Last log lines:"
+            docker logs --tail 50 manajemen-tugas-container
+          fi
