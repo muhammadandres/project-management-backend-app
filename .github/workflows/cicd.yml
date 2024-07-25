@@ -1,96 +1,66 @@
 name: Deploy Go Application
-
 on:
-  push:
-    branches:
-      - master
-
+    push:
+        branches:
+          - master
 jobs:
-  build:
-    runs-on: ubuntu-latest 
-    steps:
-      - name: Checkout Source
-        uses: actions/checkout@v4
-
-      - name: Create .env file
-        run: |
-          echo 'PORT=${{ secrets.PORT }}' >> .env
-          echo 'DB_URL=${{ secrets.DB_URL }}' >> .env
-          echo 'SECRET=${{ secrets.SECRET }}' >> .env
-          echo 'AWS_REGION=${{ secrets.AWS_REGION }}' >> .env
-          echo 'AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}' >> .env
-          echo 'AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}' >> .env
-          
-      - name: Create credentials.json
-        env:
-          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CALENDAR_CREDENTIALS }}
-        run: echo "$GOOGLE_CREDENTIALS" > credentials.json
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_ACCESS_TOKEN }}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: muhammadandres/manajementugas:latest
-
-  deploy:
-    needs: build
-    runs-on: self-hosted
-    steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Pull latest Docker image
-        run: docker pull muhammadandres/manajementugas:latest
-
-      - name: Stop and remove old container
-        run: docker rm -f manajemen-tugas-container || true
-
-      - name: Run and debug Docker container
-        env:
-          PORT: ${{ secrets.PORT }}
-          DB_URL: ${{ secrets.DB_URL }}
-          SECRET: ${{ secrets.SECRET }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          DB_HOST: ${{ secrets.DB_HOST }}
-          DB_USER: ${{ secrets.DB_USER }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          DB_NAME: ${{ secrets.DB_NAME }}
-        run: |
-          # Run container in interactive mode
-          docker run -d --name manajemen-tugas-container \
-            -p ${{ secrets.PORT }}:${{ secrets.PORT }} \
-            --env-file <(env | grep -E 'PORT|DB_URL|SECRET|AWS_|DB_') \
-            muhammadandres/manajementugas:latest
-      
-          # Wait a bit
-          sleep 5
-      
-          # Check container status
-          docker ps -a
-      
-          # Print container logs
-          echo "Container logs:"
-          docker logs manajemen-tugas-container
-      
-          # Try to execute a command inside the container
-          echo "Environment variables inside container:"
-          docker exec -i manajemen-tugas-container env || echo "Failed to execute command in container"
-      
-          # If container exited, print last few log lines
-          if [ "$(docker inspect -f '{{.State.Running}}' manajemen-tugas-container)" = "false" ]; then
-            echo "Container exited. Last log lines:"
-            docker logs --tail 50 manajemen-tugas-container
-          fi
+    build:
+        runs-on: ubuntu-latest 
+        steps:
+            - name: Checkout Source
+              uses: actions/checkout@v4
+            - name: Create .env file
+              run: |
+                echo 'PORT=${{ secrets.PORT }}' >> .env
+                echo 'DB_URL=${{ secrets.DB_URL }}' >> .env
+                echo 'SECRET=${{ secrets.SECRET }}' >> .env
+                echo 'AWS_REGION=${{ secrets.AWS_REGION }}' >> .env
+                echo 'AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}' >> .env
+                echo 'AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}' >> .env
+                
+            - name: Create credentials.json
+              env:
+                GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CALENDAR_CREDENTIALS }}
+              run: |
+                echo '${GOOGLE_CALENDAR_CREDENTIALS}' >> credentials.json    
+                
+            - name: Login to Docker Hub
+              run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_ACCESS_TOKEN }}
+            - name: Build Docker image
+              run: docker build -t muhammadandres/manajementugas .
+            - name: Push image to Docker Hub
+              run: docker push muhammadandres/manajementugas:latest
+    deploy:
+        needs: build
+        runs-on: self-hosted
+        steps:
+            - name: Configure AWS credentials
+              uses: aws-actions/configure-aws-credentials@v1
+              with:
+                aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+                aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+                aws-region: ${{ secrets.AWS_REGION }}
+            - name: Install AWS CLI v2
+              run: |
+                sudo apt-get update && sudo apt-get install -y unzip
+                curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+                unzip -o awscliv2.zip
+                sudo ./aws/install --update
+              shell: bash
+            - name: Pull Docker image
+              run: docker pull muhammadandres/manajementugas:latest
+            - name: Delete old container
+              run: docker rm -f manajemen-tugas-container || true
+            - name: Run Docker container
+              env:
+                DB_HOST: ${{ secrets.DB_HOST }}
+                DB_USER: ${{ secrets.DB_USER }}
+                DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+                DB_NAME: ${{ secrets.DB_NAME }}
+              run: |
+                docker run -d -p 4040:4040 --name manajemen-tugas-container \
+                  -e DB_HOST=$DB_HOST \
+                  -e DB_USER=$DB_USER \
+                  -e DB_PASSWORD=$DB_PASSWORD \
+                  -e DB_NAME=$DB_NAME \
+                  muhammadandres/manajementugas:latest

@@ -1,22 +1,9 @@
-FROM golang:1.22.2-alpine AS builder
-
+FROM golang:1.22.2-alpine
 WORKDIR /app
-
 COPY go.mod go.sum ./
-RUN go mod download
-
+RUN go mod tidy
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
-
-FROM alpine:latest  
-
-RUN apk --no-cache add ca-certificates
-
-WORKDIR /root/
-
-COPY --from=builder /app/main .
-COPY credentials.json .
-
+RUN go build -o main ./main.go
+RUN chmod +x main
 EXPOSE 4040
-
-CMD ["./main"]
+CMD [ "./main" ]
