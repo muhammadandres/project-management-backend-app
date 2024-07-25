@@ -1,8 +1,10 @@
 name: Deploy Go Application
+
 on:
     push:
         branches:
           - master
+
 jobs:
     build:
         runs-on: ubuntu-latest 
@@ -35,7 +37,7 @@ jobs:
         runs-on: self-hosted
         steps:
             - name: Configure AWS credentials
-              uses: aws-actions/configure-aws-credentials@v1
+              uses: aws-actions/configure-aws-credentials@v4
               with:
                 aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
                 aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -58,7 +60,7 @@ jobs:
                 DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
                 DB_NAME: ${{ secrets.DB_NAME }}
               run: |
-                docker run -d -p 4040:4040 --name manajemen-tugas-container \
+                docker run -d -p 4040:4040 --network host --name manajemen-tugas-container \
                   -e DB_HOST=$DB_HOST \
                   -e DB_USER=$DB_USER \
                   -e DB_PASSWORD=$DB_PASSWORD \
