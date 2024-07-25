@@ -5,5 +5,5 @@ RUN go mod tidy
 COPY . .
 RUN go build -o main ./main.go
 RUN chmod +x main
-EXPOSE 7070
+EXPOSE 3030
 CMD [ "./main" ]
