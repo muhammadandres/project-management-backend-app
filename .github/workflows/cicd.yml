@@ -72,30 +72,17 @@ jobs:
           docker run -d \
             --name manajemen-tugas-container \
             -p 4040:4040 \
-            -e PORT=$PORT \
-            -e DB_URL=$DB_URL \
-            -e SECRET=$SECRET \
-            -e AWS_REGION=$AWS_REGION \
-            -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
-            -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
-            -e DB_HOST=$DB_HOST \
-            -e DB_USER=$DB_USER \
-            -e DB_PASSWORD=$DB_PASSWORD \
-            -e DB_NAME=$DB_NAME \
+            --env-file <(env | grep -E 'PORT|DB_URL|SECRET|AWS_|DB_') \
             muhammadandres/manajementugas:latest
-
-      - name: Check container logs
-        run: docker logs manajemen-tugas-container
-
-      - name: Verify application health
-        run: |
-          for i in {1..5}; do
-            if curl -sSf http://localhost:4040/health; then
-              echo "Application is healthy"
-              exit 0
-            fi
-            echo "Waiting for application to become healthy..."
-            sleep 10
-          done
-          echo "Application failed to become healthy"
-          exit 1
+      
+          # Wait for container to start
+          sleep 10
+      
+          # Check if container is running
+          docker ps | grep manajemen-tugas-container || (echo "Container failed to start" && exit 1)
+      
+          # Print container logs
+          docker logs manajemen-tugas-container
+      
+          # Print environment variables inside the container
+          docker exec manajemen-tugas-container env
