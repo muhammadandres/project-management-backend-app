@@ -1,5 +1,6 @@
 FROM golang:1.22.2-alpine AS builder
 
+# create directory
 WORKDIR /app
 
 # Install dependencies
