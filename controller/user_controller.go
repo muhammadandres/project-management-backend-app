@@ -50,7 +50,7 @@ func (c *UserController) SignupUser(ctx *fiber.Ctx) error {
 		Expires: time.Now().Add(time.Hour * 24 * 3),
 	})
 
-	return ctx.Status(fiber.StatusCreated).JSON(fiber.Map{"message": "Signup successfully"})
+	return ctx.Status(fiber.StatusCreated).JSON(fiber.Map{"message": "Signup successfully", "token": tokenString})
 }
 
 func (c *UserController) LoginUser(ctx *fiber.Ctx) error {
@@ -82,7 +82,7 @@ func (c *UserController) LoginUser(ctx *fiber.Ctx) error {
 		Expires: time.Now().Add(time.Hour * 24 * 3),
 	})
 
-	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Login successfully"})
+	return ctx.Status(fiber.StatusCreated).JSON(fiber.Map{"message": "Signup successfully", "token": tokenString})
 }
 
 func (c *UserController) GoogleOauth(ctx *fiber.Ctx) error {

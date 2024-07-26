@@ -107,10 +107,29 @@ func (t *taskAndOwnerService) UpdateTaskAndOwner(task *domain.Task, manager *dom
 	// 	subject := "Task Planning Approved"
 	// 	body := fmt.Sprintf("The planning for task '%s' has been approved.", updateTask.NameTask)
 
-	// 	err = helper.SendEmail(nil, to, subject, body)
+	// 	err = helper.SendEmail(to, subject, body)
 	// 	if err != nil {
-	// 		return nil, err
+	// 		log.Printf("Failed to send email: %v", err)
+	// 		return nil, fmt.Errorf("failed to send email: %v", err)
 	// 	}
+	// }
+	// if updateTask.PlanningStatus == "Approved" {
+	// 	// Menggunakan alamat email statis untuk pengujian
+	// 	to := []string{"riyannasgianjar0401@gmail.com"}
+
+	// 	subject := "Task Planning Approved"
+	// 	body := fmt.Sprintf("The planning for task has been approved.")
+
+	// 	log.Printf("Attempting to send email to: %v", to)
+	// 	log.Printf("Subject: %s", subject)
+	// 	log.Printf("Body: %s", body)
+
+	// 	err = helper.SendEmail(to, subject, body)
+	// 	if err != nil {
+	// 		log.Printf("Failed to send email: %v", err)
+	// 		return nil, fmt.Errorf("failed to send email: %v", err)
+	// 	}
+	// 	log.Println("Email sent successfully")
 	// }
 
 	response.ProjectStatus = updateTask.ProjectStatus
