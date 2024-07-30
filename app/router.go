@@ -57,24 +57,24 @@ func SetupRoutes(app *fiber.App, db *gorm.DB) {
 	// })
 
 	// test OAuth
-	app.Get("/login", func(c *fiber.Ctx) error {
-		html := `
-		<!DOCTYPE html>
-		<html lang="en">
-		<head>
-			<meta charset="UTF-8">
-			<meta name="viewport" content="width=device-width, initial-scale=1.0">
-			<title>Google OAuth Login</title>
-		</head>
-		<body>
-			<h1>Login with Google</h1>
-			<button onclick="window.location.href='/auth/oauth'">Login with Google</button>
-		</body>
-		</html>
-		`
-		c.Set("Content-Type", "text/html")
-		return c.SendString(html)
-	})
+	// app.Get("/login", func(c *fiber.Ctx) error {
+	// 	html := `
+	// 	<!DOCTYPE html>
+	// 	<html lang="en">
+	// 	<head>
+	// 		<meta charset="UTF-8">
+	// 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	// 		<title>Google OAuth Login</title>
+	// 	</head>
+	// 	<body>
+	// 		<h1>Login with Google</h1>
+	// 		<button onclick="window.location.href='/auth/oauth'">Login with Google</button>
+	// 	</body>
+	// 	</html>
+	// 	`
+	// 	c.Set("Content-Type", "text/html")
+	// 	return c.SendString(html)
+	// })
 
 	// get started
 	app.Get("/", func(c *fiber.Ctx) error {
