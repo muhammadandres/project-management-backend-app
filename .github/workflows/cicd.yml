@@ -22,9 +22,9 @@ jobs:
                 
             - name: Create credentials.json
               env:
-                GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CALENDAR_CREDENTIALS }}
+                GOOGLE_CREDENTIALS: ${{ secrets.CREDENTIALS }}
               run: |
-                echo '${GOOGLE_CALENDAR_CREDENTIALS}' >> credentials.json    
+                echo '${CREDENTIALS}' >> credentials.json    
                 
             - name: Login to Docker Hub
               run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_ACCESS_TOKEN }}
