@@ -8,44 +8,49 @@ import (
 
 func AuthUser(userService service.UserService) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
-		// Get the cookie from request
+		// Get the cookies from request
 		tokenStringJwt := ctx.Cookies("Authorization")
-		// tokenStringOauth := ctx.Cookies("GoogleAuthorization")
+		tokenStringOauth := ctx.Cookies("GoogleAuthorization")
 
-		// validate tokenStringJwt
-		if tokenStringJwt == "" {
-			return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Your session has expired, Please login again"})
-		}
+		// Validate tokenStringJwt
 		if tokenStringJwt != "" {
 			// Decode and validate the token
 			user, err := userService.RequireAuthUser(tokenStringJwt)
 			if err != nil {
-				return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err})
+				return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid JWT token"})
 			}
 
-			// menyimpan data user agar bisa di akses jika diperlukan. Dan perlu di ingat data user akan berubah menjadi interface{}, bukan *domain.user lagi.
+			// Store user data in context
 			ctx.Locals("user", user)
 		}
 
-		// // validate tokenStringOauth
-		// if tokenStringOauth == "" {
-		// 	return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Your session has expired, Please login again"})
-		// }
-		// if tokenStringOauth != "" {
-		// 	email, ok := ctx.Locals("sessionEmail").(string)
-		// 	if !ok {
-		// 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Email not found in request context"})
-		// 	}
-		// 	user, err := userService.RequireOauth(email)
-		// 	if err != nil {
-		// 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err})
-		// 	}
+		// Validate tokenStringOauth
+		if tokenStringOauth != "" {
+			email := ctx.Locals("sessionEmail")
+			if email == nil {
+				return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Google OAuth session not found"})
+			}
 
-		// 	// menyimpan data user agar bisa di akses jika diperlukan. Dan perlu di ingat data user akan berubah menjadi interface{}, bukan *domain.user lagi.
-		// 	ctx.Locals("userOauth", user)
-		// }
+			emailStr, ok := email.(string)
+			if !ok {
+				return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Invalid session email format"})
+			}
 
-		// agar middleware terdapat pada route di bawahnya dan akan terus di eksekusi terlebih dahulu sebelum route di bawahnya.
+			user, err := userService.RequireOauth(emailStr)
+			if err != nil {
+				return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid Google OAuth session"})
+			}
+
+			// Store OAuth user data in context
+			ctx.Locals("userOauth", user)
+		}
+
+		// If neither JWT nor OAuth token is present, return unauthorized
+		if tokenStringJwt == "" && tokenStringOauth == "" {
+			return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Your session has expired, Please login again"})
+		}
+
+		// Continue to the next middleware or route handler
 		return ctx.Next()
 	}
 }

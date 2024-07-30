@@ -9,4 +9,5 @@ func LoadEnv() {
 	if err := godotenv.Load(".env"); err != nil {
 		log.Fatal("Error in loading .env file: ", err)
 	}
+	log.Println("Successfully loaded .env file")
 }

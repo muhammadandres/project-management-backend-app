@@ -33,6 +33,7 @@ type UpdateResponse struct {
 		FileUrl  string `json:"file_url,omitempty"`
 		FileName string `json:"file_name,omitempty"`
 	} `json:"project_file,omitempty"`
+	EmailsSent []string `json:"emails_sent,omitempty"`
 }
 
 func CreateResponseTask(taskModel *domain.Task) WebResponse {

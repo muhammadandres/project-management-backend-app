@@ -15,7 +15,7 @@ type TaskAndOwnerRepository interface {
 	FindAllEmployees() ([]*domain.Task, error)
 	FindAllPlanningFiles() ([]*domain.Task, error)
 	FindAllProjectFiles() ([]*domain.Task, error)
-	GetTaskEmails(taskID uint64) (ownerEmail string, managerEmails []string, employeeEmails []string, err error)
+	GetNameEmailsDescription(taskID uint64) (ownerEmail string, managerEmails []string, employeeEmails []string, nametask string, description string, err error)
 	Update(task *domain.Task, manager *domain.Manager, employee *domain.Employee, planningFile *domain.PlanningFile, projectFile *domain.ProjectFile) (*domain.Task, *domain.Manager, *domain.Employee, *domain.PlanningFile, *domain.ProjectFile, error)
 	UpdateValidationOwner(taskID uint, userID uint) error
 	UpdateValidationManager(taskID uint, userID uint) error

@@ -68,7 +68,7 @@ func getTokenFromWeb(config *oauth2.Config) *oauth2.Token {
 
 	// Start a local server to handle the callback
 	codeChan := make(chan string)
-	srv := &http.Server{Addr: "localhost:8080"}
+	srv := &http.Server{Addr: "localhost:4040"}
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		code := r.URL.Query().Get("code")
 		if code != "" {
@@ -125,8 +125,8 @@ func saveToken(path string, token *oauth2.Token) {
 	json.NewEncoder(f).Encode(token)
 }
 
-func CreateGoogleCalendarEvent(userEmail, summary, description, startDateTime, endDateTime, timeZone string, attendees []string) (*calendar.Event, error) {
-	srv, err := createCalendarService(userEmail)
+func CreateGoogleCalendarEvent(senderEmail, summary, description, startDateTime, endDateTime, timeZone string, attendees []string) (*calendar.Event, error) {
+	srv, err := createCalendarService(senderEmail)
 	if err != nil {
 		return nil, err
 	}
@@ -142,11 +142,14 @@ func CreateGoogleCalendarEvent(userEmail, summary, description, startDateTime, e
 			DateTime: endDateTime,
 			TimeZone: timeZone,
 		},
-		Attendees: make([]*calendar.EventAttendee, len(attendees)),
+		Attendees: make([]*calendar.EventAttendee, 0, len(attendees)),
 	}
 
-	for i, email := range attendees {
-		event.Attendees[i] = &calendar.EventAttendee{Email: email}
+	// Hanya tambahkan attendee jika bukan pengirim
+	for _, email := range attendees {
+		if email != senderEmail {
+			event.Attendees = append(event.Attendees, &calendar.EventAttendee{Email: email})
+		}
 	}
 
 	calendarId := "primary"

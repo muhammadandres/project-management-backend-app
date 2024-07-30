@@ -153,14 +153,14 @@ func (t *taskAndOwnerRepository) FindAllProjectFiles() ([]*domain.Task, error) {
 	return tasks, nil
 }
 
-func (t *taskAndOwnerRepository) GetTaskEmails(taskID uint64) (ownerEmail string, managerEmails []string, employeeEmails []string, err error) {
+func (t *taskAndOwnerRepository) GetNameEmailsDescription(taskID uint64) (ownerEmail string, managerEmails []string, employeeEmails []string, nametask string, description string, err error) {
 	var task domain.Task
 	err = t.db.Preload("Owner").
 		Preload("Manager").
 		Preload("Employee").
 		First(&task, taskID).Error
 	if err != nil {
-		return "", nil, nil, err
+		return "", nil, nil, "", "", err
 	}
 
 	ownerEmail = task.Owner.Email
@@ -173,30 +173,65 @@ func (t *taskAndOwnerRepository) GetTaskEmails(taskID uint64) (ownerEmail string
 		employeeEmails = append(employeeEmails, employee.Email)
 	}
 
-	return ownerEmail, managerEmails, employeeEmails, nil
+	nametask = task.NameTask
+	description = task.PlanningDescription
+
+	return ownerEmail, managerEmails, employeeEmails, description, nametask, nil
 }
 
 func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manager, employee *domain.Employee, planningFile *domain.PlanningFile, projectFile *domain.ProjectFile) (*domain.Task, *domain.Manager, *domain.Employee, *domain.PlanningFile, *domain.ProjectFile, error) {
-	// Simpan task
-	if task.NameTask != "" || task.PlanningDescription != "" || task.PlanningStatus != "" || task.ProjectStatus != "" || task.PlanningDueDate != "" || task.ProjectDueDate != "" || task.Priority != "" || task.ProjectComment != "" {
-		if err := t.db.Save(&task).Error; err != nil {
+	// Fetch the existing task
+	var existingTask domain.Task
+	if err := t.db.First(&existingTask, task.ID).Error; err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
+
+	// Update only non-empty fields
+	updates := make(map[string]interface{})
+	if task.NameTask != "" {
+		updates["name_task"] = task.NameTask
+	}
+	if task.PlanningDescription != "" {
+		updates["planning_description"] = task.PlanningDescription
+	}
+	if task.PlanningStatus != "" {
+		updates["planning_status"] = task.PlanningStatus
+	}
+	if task.ProjectStatus != "" {
+		updates["project_status"] = task.ProjectStatus
+	}
+	if task.PlanningDueDate != "" {
+		updates["planning_due_date"] = task.PlanningDueDate
+	}
+	if task.ProjectDueDate != "" {
+		updates["project_due_date"] = task.ProjectDueDate
+	}
+	if task.Priority != "" {
+		updates["priority"] = task.Priority
+	}
+	if task.ProjectComment != "" {
+		updates["project_comment"] = task.ProjectComment
+	}
+
+	// Apply updates if there are any
+	if len(updates) > 0 {
+		if err := t.db.Model(&existingTask).Updates(updates).Error; err != nil {
 			return nil, nil, nil, nil, nil, err
 		}
 	}
 
-	// Simpan manager
-	if manager != nil && (manager.Email != "") {
+	// Manager logic
+	if manager != nil && manager.Email != "" {
 		var user domain.User
 		if err := t.db.First(&user, "email = ?", manager.Email).Error; err != nil {
 			return nil, nil, nil, nil, nil, errors.New("User not found")
 		}
 
-		// validasi agar ada tidak ada user yang sama pada manager
 		var countManager int64
 		err := t.db.Model(&domain.Manager{}).
-			Where("user_id = ?", user.ID).                                         // Filter by user_id
-			Joins("JOIN task_managers ON task_managers.manager_id = managers.id"). // Join with task_managers
-			Where("task_managers.task_id = ?", task.ID).                           // Filter by task_id
+			Where("user_id = ?", user.ID).
+			Joins("JOIN task_managers ON task_managers.manager_id = managers.id").
+			Where("task_managers.task_id = ?", existingTask.ID).
 			Count(&countManager).Error
 		if err != nil {
 			return nil, nil, nil, nil, nil, err
@@ -205,12 +240,11 @@ func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manag
 			return nil, nil, nil, nil, nil, errors.New("User is already assigned as manager to a task")
 		}
 
-		// validasi agar user yang telah menjadi employee tidak bisa menjadi manager lagi pada task yang sama.
 		var countEmployee int64
 		err = t.db.Model(&domain.Employee{}).
-			Where("user_id = ?", user.ID).                                             // Filter by user_id
-			Joins("JOIN task_employees ON task_employees.employee_id = employees.id"). // Join with task_employees
-			Where("task_employees.task_id = ?", task.ID).                              // Filter by task_id
+			Where("user_id = ?", user.ID).
+			Joins("JOIN task_employees ON task_employees.employee_id = employees.id").
+			Where("task_employees.task_id = ?", existingTask.ID).
 			Count(&countEmployee).Error
 		if err != nil {
 			return nil, nil, nil, nil, nil, err
@@ -218,31 +252,29 @@ func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manag
 		if countEmployee > 0 {
 			return nil, nil, nil, nil, nil, errors.New("User is already assigned as employee to a task")
 		} else {
-			// jika kedua validasi tersebut berhasil masukkan data ke table penghubung
 			manager.UserID = user.ID
 			if err := t.db.Save(manager).Error; err != nil {
 				return nil, nil, nil, nil, nil, errors.New("Failed to save manager data")
 			}
 			sqlQuery := "INSERT INTO task_managers (task_id, manager_id) VALUES (?, ?)"
-			if err := t.db.Exec(sqlQuery, task.ID, manager.ID).Error; err != nil {
+			if err := t.db.Exec(sqlQuery, existingTask.ID, manager.ID).Error; err != nil {
 				return nil, nil, nil, nil, nil, err
 			}
 		}
 	}
 
-	// Simpan employee
-	if employee != nil && (employee.Email != "") {
+	// Employee logic
+	if employee != nil && employee.Email != "" {
 		var user domain.User
 		if err := t.db.First(&user, "email = ?", employee.Email).Error; err != nil {
 			return nil, nil, nil, nil, nil, errors.New("User not found")
 		}
 
-		// validasi agar ada tidak ada user yang sama pada employee
 		var countEmployee int64
 		err := t.db.Model(&domain.Employee{}).
-			Where("user_id = ?", user.ID).                                             // Filter by user_id
-			Joins("JOIN task_employees ON task_employees.employee_id = employees.id"). // Join with task_employees
-			Where("task_employees.task_id = ?", task.ID).                              // Filter by task_id
+			Where("user_id = ?", user.ID).
+			Joins("JOIN task_employees ON task_employees.employee_id = employees.id").
+			Where("task_employees.task_id = ?", existingTask.ID).
 			Count(&countEmployee).Error
 		if err != nil {
 			return nil, nil, nil, nil, nil, err
@@ -251,12 +283,11 @@ func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manag
 			return nil, nil, nil, nil, nil, errors.New("User is already assigned as employee to a task")
 		}
 
-		// validasi agar user yang telah menjadi manager tidak bisa menjadi employee lagi pada task yang sama.
 		var countManager int64
 		err = t.db.Model(&domain.Manager{}).
-			Where("user_id = ?", user.ID).                                         // Filter by user_id
-			Joins("JOIN task_managers ON task_managers.manager_id = managers.id"). // Join with task_managers
-			Where("task_managers.task_id = ?", task.ID).                           // Filter by task_id
+			Where("user_id = ?", user.ID).
+			Joins("JOIN task_managers ON task_managers.manager_id = managers.id").
+			Where("task_managers.task_id = ?", existingTask.ID).
 			Count(&countManager).Error
 		if err != nil {
 			return nil, nil, nil, nil, nil, err
@@ -264,19 +295,18 @@ func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manag
 		if countManager > 0 {
 			return nil, nil, nil, nil, nil, errors.New("User is already assigned as manager to a task")
 		} else {
-			// jika kedua validasi tersebut berhasil masukkan data ke table penghubung
 			employee.UserID = user.ID
 			if err := t.db.Save(employee).Error; err != nil {
-				return nil, nil, nil, nil, nil, errors.New("Failed to save manager data")
+				return nil, nil, nil, nil, nil, errors.New("Failed to save employee data")
 			}
 			sqlQuery := "INSERT INTO task_employees (task_id, employee_id) VALUES (?, ?)"
-			if err := t.db.Exec(sqlQuery, task.ID, employee.ID).Error; err != nil {
+			if err := t.db.Exec(sqlQuery, existingTask.ID, employee.ID).Error; err != nil {
 				return nil, nil, nil, nil, nil, err
 			}
 		}
 	}
 
-	// Simpan planningFile
+	// Planning file logic
 	if planningFile != nil && (planningFile.FileUrl != "" || planningFile.FileName != "") {
 		var count int64
 		if err := t.db.Model(&domain.PlanningFile{}).Where("file_url", planningFile.FileUrl).Count(&count).Error; err != nil {
@@ -289,15 +319,14 @@ func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manag
 			if err := t.db.Save(planningFile).Error; err != nil {
 				return nil, nil, nil, nil, nil, fmt.Errorf("Failed to upload file: %v", err)
 			}
-			// Eksekusi query SQL untuk menambahkan relasi task_project_files
 			sqlQuery := "INSERT INTO task_planning_files (task_id, planning_file_id) VALUES (?, ?)"
-			if err := t.db.Exec(sqlQuery, task.ID, planningFile.ID).Error; err != nil {
+			if err := t.db.Exec(sqlQuery, existingTask.ID, planningFile.ID).Error; err != nil {
 				return nil, nil, nil, nil, nil, err
 			}
 		}
 	}
 
-	// Simpan projectFile
+	// Project file logic
 	if projectFile != nil && (projectFile.FileUrl != "" || projectFile.FileName != "") {
 		var count int64
 		if err := t.db.Model(&domain.ProjectFile{}).Where("file_url", projectFile.FileUrl).Count(&count).Error; err != nil {
@@ -310,15 +339,14 @@ func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manag
 			if err := t.db.Save(projectFile).Error; err != nil {
 				return nil, nil, nil, nil, nil, fmt.Errorf("Failed to upload file: %v", err)
 			}
-			// Eksekusi query SQL untuk menambahkan relasi task_project_files
 			sqlQuery := "INSERT INTO task_project_files (task_id, project_file_id) VALUES (?, ?)"
-			if err := t.db.Exec(sqlQuery, task.ID, projectFile.ID).Error; err != nil {
+			if err := t.db.Exec(sqlQuery, existingTask.ID, projectFile.ID).Error; err != nil {
 				return nil, nil, nil, nil, nil, err
 			}
 		}
 	}
 
-	return task, manager, employee, planningFile, projectFile, nil
+	return &existingTask, manager, employee, planningFile, projectFile, nil
 }
 
 func (t *taskAndOwnerRepository) UpdateValidationOwner(taskID uint, userID uint) error {
