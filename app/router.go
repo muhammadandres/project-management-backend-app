@@ -76,21 +76,6 @@ func SetupRoutes(app *fiber.App, db *gorm.DB) {
 	// 	return c.SendString(html)
 	// })
 
-	// get started
-	app.Get("/", func(c *fiber.Ctx) error {
-		tokenStringJwt := c.Cookies("Authorization")
-		// tokenStringOauth := ctx.Cookies("GoogleAuthorization")
-
-		// validate tokenStringJwt
-		if tokenStringJwt == "" {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"error": "You are not authorized. Please sign in or sign up to access this resource.",
-			})
-		}
-
-		return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "You are authorized"})
-	})
-
 	// Group route untuk user
 	userRoutes := app.Group("/")
 	userRoutes.Post("user/signup", userController.SignupUser)
