@@ -87,14 +87,24 @@ func (c *UserController) LoginUser(ctx *fiber.Ctx) error {
 
 func (c *UserController) GoogleOauth(ctx *fiber.Ctx) error {
 	config := helper.SetupGoogleAuth()
-	url := config.AuthCodeURL("state", oauth2.AccessTypeOffline)
-
+	state := helper.GenerateRandomState()
+	url := config.AuthCodeURL(state, oauth2.AccessTypeOffline)
+	ctx.Cookie(&fiber.Cookie{
+		Name:    "oauthstate",
+		Value:   state,
+		Expires: time.Now().Add(time.Hour),
+	})
 	return ctx.Redirect(url, fiber.StatusTemporaryRedirect)
 }
 
 func (c *UserController) GoogleCallback(ctx *fiber.Ctx) error {
-	code := ctx.Query("code")
+	state := ctx.Query("state")
+	storedState := ctx.Cookies("oauthstate")
+	if state != storedState {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid OAuth state"})
+	}
 
+	code := ctx.Query("code")
 	config := helper.SetupGoogleAuth()
 	t, err := config.Exchange(context.Background(), code)
 	if err != nil {
