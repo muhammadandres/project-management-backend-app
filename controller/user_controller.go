@@ -105,7 +105,6 @@ func (c *UserController) GoogleCallback(ctx *fiber.Ctx) error {
 	}
 
 	code := ctx.Query("code")
-
 	config := helper.SetupGoogleAuth()
 	t, err := config.Exchange(context.Background(), code)
 	if err != nil {
