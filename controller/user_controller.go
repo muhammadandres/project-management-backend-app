@@ -105,17 +105,6 @@ func (c *UserController) GoogleCallback(ctx *fiber.Ctx) error {
 	state := ctx.Query("state")
 	code := ctx.Query("code")
 
-	// Cek apakah ini callback untuk Calendar API
-	if state == "state-token" {
-		return helper.HandleCalendarCallback(code)
-	}
-	if state == "state-token" {
-		err := helper.HandleCalendarCallback(code)
-		if err != nil {
-			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-		}
-	}
-
 	storedState := ctx.Cookies("oauthstate")
 	if state != storedState {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid OAuth state"})
@@ -129,6 +118,12 @@ func (c *UserController) GoogleCallback(ctx *fiber.Ctx) error {
 	t, err := config.Exchange(context.Background(), code)
 	if err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	// Simpan token
+	err = helper.SaveToken(t)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to save token"})
 	}
 
 	client := config.Client(context.Background(), t)
