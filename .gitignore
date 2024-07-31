@@ -4,7 +4,3 @@
 tmp/
 .dockerignore
 .env
-credentials.json
-token_m.andres.novrizal@gmail.com.json
-brevo.go
-setupGoogleAuth.go
