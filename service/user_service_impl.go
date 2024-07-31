@@ -100,7 +100,7 @@ func (s *userService) LoginUser(user *domain.User) (string, error) {
 	// generate token jwt
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub": dbUser.ID,
-		"exp": time.Now().Add(time.Hour * 24 * 30).Unix(),
+		"exp": time.Now().Add(time.Hour * 24 * 3).Unix(),
 	})
 
 	tokenString, err := token.SignedString([]byte(os.Getenv("SECRET")))
@@ -189,22 +189,6 @@ func (s *userService) GetUserByID(id interface{}) (*domain.User, error) {
 }
 
 func (s *userService) FindAllUsers() ([]*domain.User, error) {
-	// test google calendar
-	// event, err := helper.CreateGoogleCalendarEvent(
-	// 	userEmail,                        // user email
-	// 	"New Task Due Date",              // summary
-	// 	"Task description",               // description
-	// 	"2024-06-15T09:00:00Z",           // startDateTime
-	// 	"2024-06-15T17:00:00Z",           // endDateTime
-	// 	"UTC",                            // timeZone
-	// 	[]string{"attendee@example.com"}, // attendees
-	// )
-	// if err != nil {
-	// 	log.Printf("Error creating Google Calendar event: %v", err)
-	// } else {
-	// 	log.Printf("Event created: %s", event.HtmlLink)
-	// }
-
 	return s.userRepository.FindAll()
 }
 

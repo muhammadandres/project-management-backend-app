@@ -220,13 +220,14 @@ func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manag
 		}
 	}
 
-	// Manager logic
-	if manager != nil && manager.Email != "" {
+	// Simpan manager
+	if manager != nil && (manager.Email != "") {
 		var user domain.User
 		if err := t.db.First(&user, "email = ?", manager.Email).Error; err != nil {
 			return nil, nil, nil, nil, nil, errors.New("User not found")
 		}
 
+		// validasi agar ada tidak ada user yang sama pada manager
 		var countManager int64
 		err := t.db.Model(&domain.Manager{}).
 			Where("user_id = ?", user.ID).
@@ -240,6 +241,7 @@ func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manag
 			return nil, nil, nil, nil, nil, errors.New("User is already assigned as manager to a task")
 		}
 
+		// validasi agar user yang telah menjadi employee tidak bisa menjadi manager lagi pada task yang sama.
 		var countEmployee int64
 		err = t.db.Model(&domain.Employee{}).
 			Where("user_id = ?", user.ID).
@@ -252,6 +254,7 @@ func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manag
 		if countEmployee > 0 {
 			return nil, nil, nil, nil, nil, errors.New("User is already assigned as employee to a task")
 		} else {
+			// jika kedua validasi tersebut berhasil masukkan data ke table penghubung
 			manager.UserID = user.ID
 			if err := t.db.Save(manager).Error; err != nil {
 				return nil, nil, nil, nil, nil, errors.New("Failed to save manager data")
@@ -263,13 +266,14 @@ func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manag
 		}
 	}
 
-	// Employee logic
-	if employee != nil && employee.Email != "" {
+	// Simpan employee
+	if employee != nil && (employee.Email != "") {
 		var user domain.User
 		if err := t.db.First(&user, "email = ?", employee.Email).Error; err != nil {
 			return nil, nil, nil, nil, nil, errors.New("User not found")
 		}
 
+		// validasi agar ada tidak ada user yang sama pada employee
 		var countEmployee int64
 		err := t.db.Model(&domain.Employee{}).
 			Where("user_id = ?", user.ID).
@@ -283,6 +287,7 @@ func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manag
 			return nil, nil, nil, nil, nil, errors.New("User is already assigned as employee to a task")
 		}
 
+		// validasi agar user yang telah menjadi manager tidak bisa menjadi employee lagi pada task yang sama.
 		var countManager int64
 		err = t.db.Model(&domain.Manager{}).
 			Where("user_id = ?", user.ID).
@@ -295,6 +300,7 @@ func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manag
 		if countManager > 0 {
 			return nil, nil, nil, nil, nil, errors.New("User is already assigned as manager to a task")
 		} else {
+			// jika kedua validasi tersebut berhasil masukkan data ke table penghubung
 			employee.UserID = user.ID
 			if err := t.db.Save(employee).Error; err != nil {
 				return nil, nil, nil, nil, nil, errors.New("Failed to save employee data")
@@ -306,7 +312,7 @@ func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manag
 		}
 	}
 
-	// Planning file logic
+	// Simpan planningFile
 	if planningFile != nil && (planningFile.FileUrl != "" || planningFile.FileName != "") {
 		var count int64
 		if err := t.db.Model(&domain.PlanningFile{}).Where("file_url", planningFile.FileUrl).Count(&count).Error; err != nil {
@@ -319,6 +325,7 @@ func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manag
 			if err := t.db.Save(planningFile).Error; err != nil {
 				return nil, nil, nil, nil, nil, fmt.Errorf("Failed to upload file: %v", err)
 			}
+			// Eksekusi query SQL untuk menambahkan relasi task_project_files
 			sqlQuery := "INSERT INTO task_planning_files (task_id, planning_file_id) VALUES (?, ?)"
 			if err := t.db.Exec(sqlQuery, existingTask.ID, planningFile.ID).Error; err != nil {
 				return nil, nil, nil, nil, nil, err
@@ -326,7 +333,7 @@ func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manag
 		}
 	}
 
-	// Project file logic
+	// Simpan projectFile
 	if projectFile != nil && (projectFile.FileUrl != "" || projectFile.FileName != "") {
 		var count int64
 		if err := t.db.Model(&domain.ProjectFile{}).Where("file_url", projectFile.FileUrl).Count(&count).Error; err != nil {
@@ -339,6 +346,7 @@ func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manag
 			if err := t.db.Save(projectFile).Error; err != nil {
 				return nil, nil, nil, nil, nil, fmt.Errorf("Failed to upload file: %v", err)
 			}
+			// Eksekusi query SQL untuk menambahkan relasi task_project_files
 			sqlQuery := "INSERT INTO task_project_files (task_id, project_file_id) VALUES (?, ?)"
 			if err := t.db.Exec(sqlQuery, existingTask.ID, projectFile.ID).Error; err != nil {
 				return nil, nil, nil, nil, nil, err
