@@ -93,7 +93,7 @@ func (t *taskAndOwnerService) UpdateTaskAndOwner(task *domain.Task, manager *dom
 	// notif email
 	if task.NameTask != "" {
 		response.NameTask = updateTask.NameTask
-		ownerEmail, managerEmails, employeeEmails, _, _, err := t.taskAndOwnerRepository.GetNameEmailsDescription(uint64(taskID))
+		ownerEmail, managerEmails, employeeEmails, nameTask, _, err := t.taskAndOwnerRepository.GetNameEmailsDescription(uint64(taskID))
 		if err != nil {
 			return nil, err
 		}
@@ -103,7 +103,7 @@ func (t *taskAndOwnerService) UpdateTaskAndOwner(task *domain.Task, manager *dom
 		to = append(to, employeeEmails...)
 
 		subject := "Task Name Updated"
-		body := helper.GetEmailTemplate("Name task Update", updateTask.NameTask, "Name Updated", fmt.Sprintf("The name of the task has been updated to '%s'.", updateTask.NameTask))
+		body := helper.GetEmailTemplate("Name task Update", nameTask, "Name Updated", fmt.Sprintf("The name of the task has been updated to '%s'.", updateTask.NameTask))
 
 		err = helper.SendEmail(to, subject, body)
 		if err != nil {
@@ -213,14 +213,14 @@ func (t *taskAndOwnerService) UpdateTaskAndOwner(task *domain.Task, manager *dom
 		timeZone := "Asia/Jakarta" // Sesuaikan dengan zona waktu yang diinginkan
 		attendees := managerEmails
 
-		event, err := helper.CreateGoogleCalendarEvent(senderEmail, summary, description, startDateTime, endDateTime, timeZone, attendees)
+		event, authURL, err := helper.CreateGoogleCalendarEvent(senderEmail, summary, description, startDateTime, endDateTime, timeZone, attendees)
 		if err != nil {
 			return nil, fmt.Errorf("Failed to create Google Calendar event: %v", err)
 		}
 
 		// Mengirim email undangan
 		emailSubject := fmt.Sprintf("Calendar Invite: %s", summary)
-		emailBody := helper.GetCalendarInviteTemplate(summary, description)
+		emailBody := helper.GetCalendarInviteTemplate(summary, description, authURL)
 		err = helper.SendEmail(attendees, emailSubject, emailBody)
 		if err != nil {
 			return nil, fmt.Errorf("Failed to send email: %v", err)
@@ -259,19 +259,19 @@ func (t *taskAndOwnerService) UpdateTaskAndOwner(task *domain.Task, manager *dom
 		timeZone := "Asia/Jakarta" // Sesuaikan dengan zona waktu yang diinginkan
 		attendees := employeeEmails
 
-		event, err := helper.CreateGoogleCalendarEvent(senderEmail, summary, description, startDateTime, endDateTime, timeZone, attendees)
+		event, authURL, err := helper.CreateGoogleCalendarEvent(senderEmail, summary, description, startDateTime, endDateTime, timeZone, attendees)
 		if err != nil {
 			return nil, fmt.Errorf("Failed to create Google Calendar event: %v", err)
 		}
 
 		// Mengirim email undangan
 		emailSubject := fmt.Sprintf("Calendar Invite: %s", summary)
-		emailBody := helper.GetCalendarInviteTemplate(summary, description)
+		emailBody := helper.GetCalendarInviteTemplate(summary, description, authURL)
 		err = helper.SendEmail(attendees, emailSubject, emailBody)
 		if err != nil {
 			return nil, fmt.Errorf("Failed to send email: %v", err)
 		} else {
-			emailsSent = append(emailsSent, "Task Planning due date Update Email sent successfully")
+			emailsSent = append(emailsSent, "Task Project due date Update, Email sent successfully")
 		}
 
 		log.Printf("Google Calendar event created: %s", event.HtmlLink)
