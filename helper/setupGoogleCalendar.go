@@ -75,7 +75,7 @@ func getClient(config *oauth2.Config, userEmail string) *http.Client {
 		}
 	}
 
-	saveToken(tok)
+	SaveToken(tok)
 	return config.Client(context.Background(), tok)
 }
 
@@ -91,7 +91,7 @@ func tokenFromFile() (*oauth2.Token, error) {
 	return tok, err
 }
 
-func saveToken(token *oauth2.Token) error {
+func SaveToken(token *oauth2.Token) error {
 	tokenFile := "token.json"
 	f, err := os.OpenFile(tokenFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
@@ -124,7 +124,7 @@ func refreshToken(config *oauth2.Config, token *oauth2.Token) (*oauth2.Token, er
 		return nil, err
 	}
 	if newToken.AccessToken != token.AccessToken {
-		saveToken(newToken)
+		SaveToken(newToken)
 	}
 	return newToken, nil
 }
