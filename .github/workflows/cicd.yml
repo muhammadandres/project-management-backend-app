@@ -53,8 +53,6 @@ jobs:
               run: docker pull muhammadandres/manajementugas:latest
             - name: Delete old container
               run: docker rm -f manajemen-tugas-container || true
-            - name: Create persistent volume
-              run: docker volume create app-data
             - name: Run Docker container
               env:
                 DB_HOST: ${{ secrets.DB_HOST }}
@@ -63,7 +61,6 @@ jobs:
                 DB_NAME: ${{ secrets.DB_NAME }}
               run: |
                 docker run -d -p 4040:4040 --name manajemen-tugas-container \
-                  -v app-data:/app \
                   -e DB_HOST=$DB_HOST \
                   -e DB_USER=$DB_USER \
                   -e DB_PASSWORD=$DB_PASSWORD \

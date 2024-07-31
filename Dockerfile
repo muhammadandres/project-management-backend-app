@@ -12,8 +12,6 @@ RUN go build -o main ./main.go
 
 RUN chmod +x main
 
-RUN chmod 755 /app
-
 EXPOSE 4040
 
 CMD [ "./main" ]

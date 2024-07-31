@@ -99,17 +99,10 @@ func GetCalendarInviteTemplate(summary, description, authURL string) string {
                 <h2>%s</h2>
                 <p>You have been invited to an event. Here are the details:</p>
                 <p><strong>Description:</strong> %s</p>
-                <p><strong>Important Notes:</strong></p>
-                <ul>
-                    <li>To add this event to your Google Calendar, please click the button below to authorize the application.</li>
-                    <li>After authorization, the event will be automatically added to your calendar.</li>
-                    <li>If you've already authorized the application, you may not need to click the button again.</li>
-                </ul>
+                <p><strong>Important:</strong> To add this event to your Google Calendar, please click the button below to authorize the application.</p>
                 <p style="text-align: center;">
-                    <a href="%s" class="button" style="color: white;">Authorize and Add to Calendar</a>
+                    <a href="%s" class="button">Authorize and Add to Calendar</a>
                 </p>
-                <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
-                <p style="word-break: break-all;">%s</p>
             </div>
             <div class="footer">
                 <p>This is an automated message. Please do not reply directly to this email.</p>
@@ -117,5 +110,5 @@ func GetCalendarInviteTemplate(summary, description, authURL string) string {
         </div>
     </body>
     </html>
-    `, summary, description, authURL, authURL)
+    `, summary, description, authURL)
 }

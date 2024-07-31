@@ -312,9 +312,10 @@ func (t *TaskAndOwnerController) UpdateTaskAndOwner(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	task.ID = uint64(taskIdUint64)
+
 	// manager
-	managerEmail := ctx.FormValue("manager")
-	if managerEmail != "" {
+	if managerEmail := ctx.FormValue("manager"); managerEmail != "" {
 		if err := t.taskAndOwnerService.UpdateValidationOwner(uint(taskIdUint64), uint(userID)); err != nil {
 			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 		}
@@ -322,8 +323,7 @@ func (t *TaskAndOwnerController) UpdateTaskAndOwner(ctx *fiber.Ctx) error {
 	}
 
 	// employee
-	employeeEmail := ctx.FormValue("employee")
-	if employeeEmail != "" {
+	if employeeEmail := ctx.FormValue("employee"); employeeEmail != "" {
 		if err := t.taskAndOwnerService.UpdateValidationManager(uint(taskIdUint64), uint(userID)); err != nil {
 			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 		}
@@ -331,35 +331,29 @@ func (t *TaskAndOwnerController) UpdateTaskAndOwner(ctx *fiber.Ctx) error {
 	}
 
 	// planning file
-	planningFiles, err := ctx.FormFile("planning_file")
-	if planningFiles != nil {
+	if planningFiles, err := ctx.FormFile("planning_file"); planningFiles != nil && err == nil {
 		if err := t.taskAndOwnerService.UpdateValidationManager(uint(taskIdUint64), uint(userID)); err != nil {
 			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 		}
-		if err == nil {
-			PlanningFileUrl, PlanningFileName, err := helper.SetupS3Uploader(planningFiles)
-			if err != nil {
-				return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error uploading planning file" + err.Error()})
-			}
-			planningFile.FileUrl = PlanningFileUrl
-			planningFile.FileName = PlanningFileName
+		PlanningFileUrl, PlanningFileName, err := helper.SetupS3Uploader(planningFiles)
+		if err != nil {
+			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error uploading planning file" + err.Error()})
 		}
+		planningFile.FileUrl = PlanningFileUrl
+		planningFile.FileName = PlanningFileName
 	}
 
 	// project file
-	projectFiles, err := ctx.FormFile("project_file")
-	if projectFiles != nil {
+	if projectFiles, err := ctx.FormFile("project_file"); projectFiles != nil && err == nil {
 		if err := t.taskAndOwnerService.UpdateValidationEmployee(uint(taskIdUint64), uint(userID)); err != nil {
 			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 		}
-		if err == nil {
-			ProjectFileUrl, ProjectFileName, err := helper.SetupS3Uploader(projectFiles)
-			if err != nil {
-				return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error uploading project file" + err.Error()})
-			}
-			projectFile.FileUrl = ProjectFileUrl
-			projectFile.FileName = ProjectFileName
+		ProjectFileUrl, ProjectFileName, err := helper.SetupS3Uploader(projectFiles)
+		if err != nil {
+			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error uploading project file" + err.Error()})
 		}
+		projectFile.FileUrl = ProjectFileUrl
+		projectFile.FileName = ProjectFileName
 	}
 
 	// field yang tidak berelasi pada task

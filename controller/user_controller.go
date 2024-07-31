@@ -120,11 +120,7 @@ func (c *UserController) GoogleCallback(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	// Simpan token
-	err = helper.SaveToken(t)
-	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to save token"})
-	}
+	helper.SaveToken(tok)
 
 	client := config.Client(context.Background(), t)
 	resp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
