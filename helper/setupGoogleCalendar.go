@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
-	"strings"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -20,18 +19,31 @@ import (
 func createCalendarService(userEmail string) (*calendar.Service, error) {
 	credentials := os.Getenv("GOOGLE_CALENDAR_CREDENTIALS")
 
-	// Hapus tanda kutip di awal dan akhir
-	credentials = strings.Trim(credentials, "\"")
-
-	// Decode JSON string dari environment variable
 	var credentialsJSON map[string]interface{}
+
+	// Coba parse sebagai JSON object terlebih dahulu
 	err := json.Unmarshal([]byte(credentials), &credentialsJSON)
 	if err != nil {
-		return nil, fmt.Errorf("unable to parse GOOGLE_CALENDAR_CREDENTIALS: %v", err)
+		// Jika gagal, coba parse sebagai string JSON
+		var credentialsString string
+		err = json.Unmarshal([]byte(credentials), &credentialsString)
+		if err != nil {
+			return nil, fmt.Errorf("unable to parse GOOGLE_CALENDAR_CREDENTIALS: %v", err)
+		}
+		// Parse string JSON menjadi object
+		err = json.Unmarshal([]byte(credentialsString), &credentialsJSON)
+		if err != nil {
+			return nil, fmt.Errorf("unable to parse GOOGLE_CALENDAR_CREDENTIALS content: %v", err)
+		}
 	}
 
-	// Gunakan langsung bytes dari credentials tanpa menulis ke file
-	config, err := google.ConfigFromJSON([]byte(credentials), calendar.CalendarScope)
+	// Konversi kembali ke JSON bytes untuk ConfigFromJSON
+	credentialsBytes, err := json.Marshal(credentialsJSON)
+	if err != nil {
+		return nil, fmt.Errorf("unable to marshal credentials: %v", err)
+	}
+
+	config, err := google.ConfigFromJSON(credentialsBytes, calendar.CalendarScope)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse client secret to config: %v", err)
 	}
