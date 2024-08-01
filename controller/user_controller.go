@@ -103,13 +103,12 @@ func (c *UserController) GoogleOauth(ctx *fiber.Ctx) error {
 
 func (c *UserController) GoogleCallback(ctx *fiber.Ctx) error {
 	state := ctx.Query("state")
-	code := ctx.Query("code")
-
 	storedState := ctx.Cookies("oauthstate")
 	if state != storedState {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid OAuth state"})
 	}
 
+	code := ctx.Query("code")
 	config, err := helper.SetupGoogleAuth()
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
@@ -119,8 +118,6 @@ func (c *UserController) GoogleCallback(ctx *fiber.Ctx) error {
 	if err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
-
-	helper.SaveToken(t)
 
 	client := config.Client(context.Background(), t)
 	resp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")

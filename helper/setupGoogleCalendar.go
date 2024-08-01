@@ -7,7 +7,8 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"time"
+	"os/exec"
+	"runtime"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -15,73 +16,102 @@ import (
 	"google.golang.org/api/option"
 )
 
-var hardcodedCredentials = []byte(`{
-    "web": {
-        "client_id": "91088718933-3mu4cb8n400hedbo9donc70ft7jjo90u.apps.googleusercontent.com",
-        "project_id": "main-crow-387504",
-        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-        "token_uri": "https://oauth2.googleapis.com/token",
-        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-        "client_secret": "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",
-        "redirect_uris": [
-            "https://www.manajementugas.com/auth/callback",
-            "https://www.manajementugas.com"
-        ]
-    }
-}`)
-
 func createCalendarService(userEmail string) (*calendar.Service, error) {
-	ctx := context.Background()
+	credentials := os.Getenv("GOOGLE_CALENDAR_CREDENTIALS")
 
-	// Use hardcoded credentials instead of reading from file
-	b := hardcodedCredentials
-
-	// Parse the JSON configuration
-	config, err := google.ConfigFromJSON(b, calendar.CalendarScope)
+	// Decode JSON string dari environment variable
+	var credentialsJSON map[string]interface{}
+	err := json.Unmarshal([]byte(credentials), &credentialsJSON)
 	if err != nil {
-		log.Printf("Error parsing credentials JSON: %v", err)
-		return nil, fmt.Errorf("unable to parse client secret file to config: %v", err)
+		return nil, fmt.Errorf("unable to parse GOOGLE_CALENDAR_CREDENTIALS: %v", err)
 	}
 
-	// Use the config to get a client
+	// Gunakan langsung bytes dari credentials tanpa menulis ke file
+	config, err := google.ConfigFromJSON([]byte(credentials), calendar.CalendarScope)
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse client secret to config: %v", err)
+	}
+
+	ctx := context.Background()
 	client := getClient(config, userEmail)
 
-	// Create the calendar service
 	srv, err := calendar.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
-		log.Printf("Error creating calendar service: %v", err)
 		return nil, fmt.Errorf("unable to retrieve Calendar client: %v", err)
 	}
 
 	return srv, nil
 }
 
-func getClient(config *oauth2.Config, userEmail string) *http.Client {
-	tok, err := tokenFromFile()
+func openBrowser(url string) error {
+	var cmd string
+	var args []string
+
+	switch runtime.GOOS {
+	case "linux":
+		cmd = "xdg-open"
+	case "windows":
+		cmd = "rundll32"
+		args = append(args, "url.dll,FileProtocolHandler")
+	case "darwin":
+		cmd = "open"
+	default:
+		return fmt.Errorf("unsupported platform")
+	}
+
+	args = append(args, url)
+	return exec.Command(cmd, args...).Start()
+}
+
+func getTokenFromWeb(config *oauth2.Config) *oauth2.Token {
+	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline, oauth2.ApprovalForce)
+	fmt.Printf("Go to the following link in your browser: \n%v\n", authURL)
+
+	err := openBrowser(authURL)
 	if err != nil {
-		log.Printf("Error getting token from file: %v", err)
-		tok = getTokenFromWeb(config)
+		log.Fatalf("Unable to open browser: %v", err)
 	}
 
-	// Check if token is expired
-	if tok.Expiry.Before(time.Now()) {
-		log.Println("Token has expired. Refreshing...")
-		newTok, err := refreshToken(config, tok)
-		if err != nil {
-			log.Printf("Error refreshing token: %v", err)
-			tok = getTokenFromWeb(config)
+	// Start a local server to handle the callback
+	codeChan := make(chan string)
+	srv := &http.Server{Addr: "localhost:4040"}
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		code := r.URL.Query().Get("code")
+		if code != "" {
+			fmt.Fprintf(w, "Authorization code received. You can close this window.")
+			codeChan <- code
 		} else {
-			tok = newTok
+			fmt.Fprintf(w, "No authorization code received.")
 		}
-	}
+	})
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Unable to start server: %v", err)
+		}
+	}()
 
-	SaveToken(tok)
+	code := <-codeChan
+	srv.Shutdown(context.TODO())
+
+	tok, err := config.Exchange(context.TODO(), code)
+	if err != nil {
+		log.Fatalf("Unable to retrieve token from web: %v", err)
+	}
+	return tok
+}
+
+func getClient(config *oauth2.Config, userEmail string) *http.Client {
+	tokFile := fmt.Sprintf("token_%s.json", userEmail)
+	tok, err := tokenFromFile(tokFile)
+	if err != nil {
+		tok = getTokenFromWeb(config)
+		saveToken(tokFile, tok)
+	}
 	return config.Client(context.Background(), tok)
 }
 
-func tokenFromFile() (*oauth2.Token, error) {
-	tokenFile := "token.json"
-	f, err := os.Open(tokenFile)
+func tokenFromFile(file string) (*oauth2.Token, error) {
+	f, err := os.Open(file)
 	if err != nil {
 		return nil, err
 	}
@@ -91,56 +121,20 @@ func tokenFromFile() (*oauth2.Token, error) {
 	return tok, err
 }
 
-func SaveToken(token *oauth2.Token) error {
-	tokenFile := "token.json"
-	f, err := os.OpenFile(tokenFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+func saveToken(path string, token *oauth2.Token) {
+	fmt.Printf("Saving credential file to: %s\n", path)
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		return err
+		log.Fatalf("Unable to cache oauth token: %v", err)
 	}
 	defer f.Close()
-	return json.NewEncoder(f).Encode(token)
+	json.NewEncoder(f).Encode(token)
 }
 
-func getTokenFromWeb(config *oauth2.Config) *oauth2.Token {
-	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline, oauth2.ApprovalForce)
-	fmt.Printf("Go to the following link in your browser: \n%v\n", authURL)
-
-	var authCode string
-	fmt.Print("Enter the authorization code: ")
-	if _, err := fmt.Scan(&authCode); err != nil {
-		log.Fatalf("Unable to read authorization code: %v", err)
-	}
-
-	tok, err := config.Exchange(context.TODO(), authCode)
-	if err != nil {
-		log.Fatalf("Unable to retrieve token from web: %v", err)
-	}
-	return tok
-}
-
-func refreshToken(config *oauth2.Config, token *oauth2.Token) (*oauth2.Token, error) {
-	newToken, err := config.TokenSource(context.Background(), token).Token()
-	if err != nil {
-		return nil, err
-	}
-	if newToken.AccessToken != token.AccessToken {
-		SaveToken(newToken)
-	}
-	return newToken, nil
-}
-
-func CreateGoogleCalendarEvent(senderEmail, summary, description, startDateTime, endDateTime, timeZone string, attendees []string) (*calendar.Event, string, error) {
-	config, err := google.ConfigFromJSON(hardcodedCredentials, calendar.CalendarScope)
-	if err != nil {
-		return nil, "", fmt.Errorf("unable to parse client secret file to config: %v", err)
-	}
-
-	// Generate the authorization URL
-	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline, oauth2.ApprovalForce)
-
+func CreateGoogleCalendarEvent(senderEmail, summary, description, startDateTime, endDateTime, timeZone string, attendees []string) (*calendar.Event, error) {
 	srv, err := createCalendarService(senderEmail)
 	if err != nil {
-		return nil, authURL, err
+		return nil, err
 	}
 
 	event := &calendar.Event{
@@ -157,6 +151,7 @@ func CreateGoogleCalendarEvent(senderEmail, summary, description, startDateTime,
 		Attendees: make([]*calendar.EventAttendee, 0, len(attendees)),
 	}
 
+	// Hanya tambahkan attendee jika bukan pengirim
 	for _, email := range attendees {
 		if email != senderEmail {
 			event.Attendees = append(event.Attendees, &calendar.EventAttendee{Email: email})
@@ -166,8 +161,8 @@ func CreateGoogleCalendarEvent(senderEmail, summary, description, startDateTime,
 	calendarId := "primary"
 	event, err = srv.Events.Insert(calendarId, event).Do()
 	if err != nil {
-		return nil, authURL, fmt.Errorf("unable to create event: %v", err)
+		return nil, fmt.Errorf("unable to create event: %v", err)
 	}
 
-	return event, authURL, nil
+	return event, nil
 }

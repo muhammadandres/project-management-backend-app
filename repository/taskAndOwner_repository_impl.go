@@ -180,13 +180,13 @@ func (t *taskAndOwnerRepository) GetNameEmailsDescription(taskID uint64) (ownerE
 }
 
 func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manager, employee *domain.Employee, planningFile *domain.PlanningFile, projectFile *domain.ProjectFile) (*domain.Task, *domain.Manager, *domain.Employee, *domain.PlanningFile, *domain.ProjectFile, error) {
-	// Fetch the existing task
-	var existingTask domain.Task
-	if err := t.db.First(&existingTask, task.ID).Error; err != nil {
+	// Ambil task yang ada dari database
+	existingTask := &domain.Task{}
+	if err := t.db.First(existingTask, task.ID).Error; err != nil {
 		return nil, nil, nil, nil, nil, err
 	}
 
-	// Update only non-empty fields
+	// Update hanya field yang tidak kosong
 	updates := make(map[string]interface{})
 	if task.NameTask != "" {
 		updates["name_task"] = task.NameTask
@@ -213,9 +213,9 @@ func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manag
 		updates["project_comment"] = task.ProjectComment
 	}
 
-	// Apply updates if there are any
+	// Jika ada update, lakukan update
 	if len(updates) > 0 {
-		if err := t.db.Model(&existingTask).Updates(updates).Error; err != nil {
+		if err := t.db.Model(existingTask).Updates(updates).Error; err != nil {
 			return nil, nil, nil, nil, nil, err
 		}
 	}
@@ -230,9 +230,9 @@ func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manag
 		// validasi agar ada tidak ada user yang sama pada manager
 		var countManager int64
 		err := t.db.Model(&domain.Manager{}).
-			Where("user_id = ?", user.ID).
-			Joins("JOIN task_managers ON task_managers.manager_id = managers.id").
-			Where("task_managers.task_id = ?", existingTask.ID).
+			Where("user_id = ?", user.ID).                                         // Filter by user_id
+			Joins("JOIN task_managers ON task_managers.manager_id = managers.id"). // Join with task_managers
+			Where("task_managers.task_id = ?", task.ID).                           // Filter by task_id
 			Count(&countManager).Error
 		if err != nil {
 			return nil, nil, nil, nil, nil, err
@@ -244,9 +244,9 @@ func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manag
 		// validasi agar user yang telah menjadi employee tidak bisa menjadi manager lagi pada task yang sama.
 		var countEmployee int64
 		err = t.db.Model(&domain.Employee{}).
-			Where("user_id = ?", user.ID).
-			Joins("JOIN task_employees ON task_employees.employee_id = employees.id").
-			Where("task_employees.task_id = ?", existingTask.ID).
+			Where("user_id = ?", user.ID).                                             // Filter by user_id
+			Joins("JOIN task_employees ON task_employees.employee_id = employees.id"). // Join with task_employees
+			Where("task_employees.task_id = ?", task.ID).                              // Filter by task_id
 			Count(&countEmployee).Error
 		if err != nil {
 			return nil, nil, nil, nil, nil, err
@@ -260,7 +260,7 @@ func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manag
 				return nil, nil, nil, nil, nil, errors.New("Failed to save manager data")
 			}
 			sqlQuery := "INSERT INTO task_managers (task_id, manager_id) VALUES (?, ?)"
-			if err := t.db.Exec(sqlQuery, existingTask.ID, manager.ID).Error; err != nil {
+			if err := t.db.Exec(sqlQuery, task.ID, manager.ID).Error; err != nil {
 				return nil, nil, nil, nil, nil, err
 			}
 		}
@@ -276,9 +276,9 @@ func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manag
 		// validasi agar ada tidak ada user yang sama pada employee
 		var countEmployee int64
 		err := t.db.Model(&domain.Employee{}).
-			Where("user_id = ?", user.ID).
-			Joins("JOIN task_employees ON task_employees.employee_id = employees.id").
-			Where("task_employees.task_id = ?", existingTask.ID).
+			Where("user_id = ?", user.ID).                                             // Filter by user_id
+			Joins("JOIN task_employees ON task_employees.employee_id = employees.id"). // Join with task_employees
+			Where("task_employees.task_id = ?", task.ID).                              // Filter by task_id
 			Count(&countEmployee).Error
 		if err != nil {
 			return nil, nil, nil, nil, nil, err
@@ -290,9 +290,9 @@ func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manag
 		// validasi agar user yang telah menjadi manager tidak bisa menjadi employee lagi pada task yang sama.
 		var countManager int64
 		err = t.db.Model(&domain.Manager{}).
-			Where("user_id = ?", user.ID).
-			Joins("JOIN task_managers ON task_managers.manager_id = managers.id").
-			Where("task_managers.task_id = ?", existingTask.ID).
+			Where("user_id = ?", user.ID).                                         // Filter by user_id
+			Joins("JOIN task_managers ON task_managers.manager_id = managers.id"). // Join with task_managers
+			Where("task_managers.task_id = ?", task.ID).                           // Filter by task_id
 			Count(&countManager).Error
 		if err != nil {
 			return nil, nil, nil, nil, nil, err
@@ -303,10 +303,10 @@ func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manag
 			// jika kedua validasi tersebut berhasil masukkan data ke table penghubung
 			employee.UserID = user.ID
 			if err := t.db.Save(employee).Error; err != nil {
-				return nil, nil, nil, nil, nil, errors.New("Failed to save employee data")
+				return nil, nil, nil, nil, nil, errors.New("Failed to save manager data")
 			}
 			sqlQuery := "INSERT INTO task_employees (task_id, employee_id) VALUES (?, ?)"
-			if err := t.db.Exec(sqlQuery, existingTask.ID, employee.ID).Error; err != nil {
+			if err := t.db.Exec(sqlQuery, task.ID, employee.ID).Error; err != nil {
 				return nil, nil, nil, nil, nil, err
 			}
 		}
@@ -327,7 +327,7 @@ func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manag
 			}
 			// Eksekusi query SQL untuk menambahkan relasi task_project_files
 			sqlQuery := "INSERT INTO task_planning_files (task_id, planning_file_id) VALUES (?, ?)"
-			if err := t.db.Exec(sqlQuery, existingTask.ID, planningFile.ID).Error; err != nil {
+			if err := t.db.Exec(sqlQuery, task.ID, planningFile.ID).Error; err != nil {
 				return nil, nil, nil, nil, nil, err
 			}
 		}
@@ -348,13 +348,13 @@ func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manag
 			}
 			// Eksekusi query SQL untuk menambahkan relasi task_project_files
 			sqlQuery := "INSERT INTO task_project_files (task_id, project_file_id) VALUES (?, ?)"
-			if err := t.db.Exec(sqlQuery, existingTask.ID, projectFile.ID).Error; err != nil {
+			if err := t.db.Exec(sqlQuery, task.ID, projectFile.ID).Error; err != nil {
 				return nil, nil, nil, nil, nil, err
 			}
 		}
 	}
 
-	return &existingTask, manager, employee, planningFile, projectFile, nil
+	return task, manager, employee, planningFile, projectFile, nil
 }
 
 func (t *taskAndOwnerRepository) UpdateValidationOwner(taskID uint, userID uint) error {

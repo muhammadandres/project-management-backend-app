@@ -73,7 +73,7 @@ func GetEmailTemplate(title, taskName, status, description string) string {
     `, title, title, taskName, status, description)
 }
 
-func GetCalendarInviteTemplate(summary, description, authURL string) string {
+func GetCalendarInviteTemplate(summary, description string) string {
 	return fmt.Sprintf(`
     <!DOCTYPE html>
     <html lang="en">
@@ -99,10 +99,13 @@ func GetCalendarInviteTemplate(summary, description, authURL string) string {
                 <h2>%s</h2>
                 <p>You have been invited to an event. Here are the details:</p>
                 <p><strong>Description:</strong> %s</p>
-                <p><strong>Important:</strong> To add this event to your Google Calendar, please click the button below to authorize the application.</p>
-                <p style="text-align: center;">
-                    <a href="%s" class="button">Authorize and Add to Calendar</a>
-                </p>
+                <p><strong>Important Notes:</strong></p>
+                <ul>
+                    <li>The official calendar invitation will be sent separately by the Google Calendar system shortly.</li>
+                    <li>If you haven't received the invitation yet, please wait a few moments and check your inbox periodically.</li>
+                    <li>Once you receive the invitation, don't forget to click the "Add to calendar" button on the invite.</li>
+                </ul>
+                <p>Please check your calendar in the next few minutes to see the date and time of this event.</p>
             </div>
             <div class="footer">
                 <p>This is an automated message. Please do not reply directly to this email.</p>
@@ -110,5 +113,5 @@ func GetCalendarInviteTemplate(summary, description, authURL string) string {
         </div>
     </body>
     </html>
-    `, summary, description, authURL)
+    `, summary, description)
 }
