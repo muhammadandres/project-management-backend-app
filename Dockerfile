@@ -1,5 +1,7 @@
 FROM golang:1.22.2-alpine
 
+RUN apk add --no-cache tzdata
+
 WORKDIR /app
 
 COPY go.mod go.sum ./
