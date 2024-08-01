@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -18,6 +19,9 @@ import (
 
 func createCalendarService(userEmail string) (*calendar.Service, error) {
 	credentials := os.Getenv("GOOGLE_CALENDAR_CREDENTIALS")
+
+	// Hapus tanda kutip di awal dan akhir
+	credentials = strings.Trim(credentials, "\"")
 
 	// Decode JSON string dari environment variable
 	var credentialsJSON map[string]interface{}
