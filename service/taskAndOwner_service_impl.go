@@ -36,11 +36,11 @@ func (t *taskAndOwnerService) CreateTaskAndOwner(user *domain.User, task *domain
 	return taskDB, ownerDB, nil
 }
 
-func (t *taskAndOwnerService) GetTaskAndOwnerById(id uint) (*domain.Task, error) {
+func (t *taskAndOwnerService) GetTaskAndOwnerById(id uint) (*domain.TaskWithInvitation, error) {
 	return t.taskAndOwnerRepository.FindById(id)
 }
 
-func (t *taskAndOwnerService) FindAllTasksAndOwners() ([]*domain.Task, error) {
+func (t *taskAndOwnerService) FindAllTasksAndOwners() ([]*domain.TaskWithInvitation, error) {
 	return t.taskAndOwnerRepository.FindAll()
 }
 
@@ -80,7 +80,7 @@ func (t *taskAndOwnerService) UpdateTaskAndOwner(task *domain.Task, manager *dom
 	task.ID = taskDB.ID
 	task.OwnerID = taskDB.OwnerID
 
-	updateTask, updateManager, updateEmployee, updatePlanningFile, updateProjectFile, err := t.taskAndOwnerRepository.Update(task, manager, employee, planningFile, projectFile)
+	updateTask, updateManager, updateEmployee, updatePlanningFile, updateProjectFile, managerInvitation, employeeInvitation, err := t.taskAndOwnerRepository.Update(task, manager, employee, planningFile, projectFile)
 	if err != nil {
 		return nil, err
 	}
@@ -185,96 +185,101 @@ func (t *taskAndOwnerService) UpdateTaskAndOwner(task *domain.Task, manager *dom
 		log.Println(ownerEmail, managerEmails, employeeEmails)
 	}
 
-	// calendar schedule
 	if updateTask.PlanningDueDate != "" {
 		response.PlanningDueDate = updateTask.PlanningDueDate
-		//Parse tanggal dari string ke time.Time
-		parsedDueDate, err := time.Parse("02-01-2006", updateTask.PlanningDueDate)
-		if err != nil {
-			return nil, fmt.Errorf("Failed to parse planning due date: %v", err)
-		}
 
 		_, managerEmails, _, TaskDescription, nametask, err := t.taskAndOwnerRepository.GetNameEmailsDescription(uint64(taskID))
 		if err != nil {
 			return nil, err
 		}
 
-		// Create Google Calendar event
-		senderEmail := "m.andres.novrizal@gmail.com"
-		summary := fmt.Sprintf("Task: %s", nametask)
-		description := TaskDescription
+		if len(managerEmails) > 0 {
+			//Parse date from string to time.Time
+			parsedDueDate, err := time.Parse("02-01-2006", updateTask.PlanningDueDate)
+			if err != nil {
+				return nil, fmt.Errorf("Failed to parse planning due date: %v", err)
+			}
 
-		// Menggunakan waktu sekarang untuk startDateTime
-		startDateTime := time.Now().Format(time.RFC3339)
+			// Create Google Calendar event
+			senderEmail := "m.andres.novrizal@gmail.com"
+			summary := fmt.Sprintf("Task: %s", nametask)
+			description := TaskDescription
 
-		// Format endDateTime sesuai dengan yang diharapkan oleh Google Calendar API
-		endDateTime := parsedDueDate.Format(time.RFC3339)
+			// Use current time for startDateTime
+			startDateTime := time.Now().Format(time.RFC3339)
 
-		timeZone := "Asia/Jakarta" // Sesuaikan dengan zona waktu yang diinginkan
-		attendees := managerEmails
+			// Format endDateTime as expected by Google Calendar API
+			endDateTime := parsedDueDate.Format(time.RFC3339)
 
-		event, err := helper.CreateGoogleCalendarEvent(senderEmail, summary, description, startDateTime, endDateTime, timeZone, attendees)
-		if err != nil {
-			return nil, fmt.Errorf("Failed to create Google Calendar event: %v", err)
+			timeZone := "Asia/Jakarta" // Adjust to desired timezone
+			attendees := managerEmails
+
+			event, err := helper.CreateGoogleCalendarEvent(senderEmail, summary, description, startDateTime, endDateTime, timeZone, attendees)
+			if err != nil {
+				log.Printf("Failed to create Google Calendar event: %v", err)
+			} else {
+				log.Printf("Google Calendar event created: %s", event.HtmlLink)
+			}
+
+			// Send email invitation
+			emailSubject := fmt.Sprintf("Calendar Invite: %s", summary)
+			emailBody := helper.GetCalendarInviteTemplate(summary, description)
+			err = helper.SendEmail(attendees, emailSubject, emailBody)
+			if err != nil {
+				log.Printf("Failed to send email: %v", err)
+			} else {
+				emailsSent = append(emailsSent, "Task Planning due date Update, Email sent successfully")
+			}
 		}
-
-		// Mengirim email undangan
-		emailSubject := fmt.Sprintf("Calendar Invite: %s", summary)
-		emailBody := helper.GetCalendarInviteTemplate(summary, description)
-		err = helper.SendEmail(attendees, emailSubject, emailBody)
-		if err != nil {
-			return nil, fmt.Errorf("Failed to send email: %v", err)
-		} else {
-			emailsSent = append(emailsSent, "Task Planning due date Update, Email sent successfully")
-		}
-
-		log.Printf("Google Calendar event created: %s", event.HtmlLink)
 	}
 
 	// calendar schedule
 	if updateTask.ProjectDueDate != "" {
 		response.ProjectDueDate = updateTask.ProjectDueDate
-		//Parse tanggal dari string ke time.Time
-		parsedDueDate, err := time.Parse("02-01-2006", updateTask.ProjectDueDate)
-		if err != nil {
-			return nil, fmt.Errorf("Failed to parse project due date: %v", err)
-		}
 
 		_, _, employeeEmails, TaskDescription, nametask, err := t.taskAndOwnerRepository.GetNameEmailsDescription(uint64(taskID))
 		if err != nil {
 			return nil, err
 		}
 
-		// Create Google Calendar event
-		senderEmail := "m.andres.novrizal@gmail.com"
-		summary := fmt.Sprintf("Task: %s", nametask)
-		description := TaskDescription
+		if len(employeeEmails) > 0 {
+			//Parse date from string to time.Time
+			parsedDueDate, err := time.Parse("02-01-2006", updateTask.ProjectDueDate)
+			if err != nil {
+				return nil, fmt.Errorf("Failed to parse project due date: %v", err)
+			}
 
-		// Menggunakan waktu sekarang untuk startDateTime
-		startDateTime := time.Now().Format(time.RFC3339)
+			// Create Google Calendar event
+			senderEmail := "m.andres.novrizal@gmail.com"
+			summary := fmt.Sprintf("Task: %s", nametask)
+			description := TaskDescription
 
-		// Format endDateTime sesuai dengan yang diharapkan oleh Google Calendar API
-		endDateTime := parsedDueDate.Format(time.RFC3339)
+			// Use current time for startDateTime
+			startDateTime := time.Now().Format(time.RFC3339)
 
-		timeZone := "Asia/Jakarta" // Sesuaikan dengan zona waktu yang diinginkan
-		attendees := employeeEmails
+			// Format endDateTime as expected by Google Calendar API
+			endDateTime := parsedDueDate.Format(time.RFC3339)
 
-		event, err := helper.CreateGoogleCalendarEvent(senderEmail, summary, description, startDateTime, endDateTime, timeZone, attendees)
-		if err != nil {
-			return nil, fmt.Errorf("Failed to create Google Calendar event: %v", err)
+			timeZone := "Asia/Jakarta" // Adjust to desired timezone
+			attendees := employeeEmails
+
+			event, err := helper.CreateGoogleCalendarEvent(senderEmail, summary, description, startDateTime, endDateTime, timeZone, attendees)
+			if err != nil {
+				log.Printf("Failed to create Google Calendar event: %v", err)
+			} else {
+				log.Printf("Google Calendar event created: %s", event.HtmlLink)
+			}
+
+			// Send email invitation
+			emailSubject := fmt.Sprintf("Calendar Invite: %s", summary)
+			emailBody := helper.GetCalendarInviteTemplate(summary, description)
+			err = helper.SendEmail(attendees, emailSubject, emailBody)
+			if err != nil {
+				log.Printf("Failed to send email: %v", err)
+			} else {
+				emailsSent = append(emailsSent, "Task Project due date Update, Email sent successfully")
+			}
 		}
-
-		// Mengirim email undangan
-		emailSubject := fmt.Sprintf("Calendar Invite: %s", summary)
-		emailBody := helper.GetCalendarInviteTemplate(summary, description)
-		err = helper.SendEmail(attendees, emailSubject, emailBody)
-		if err != nil {
-			return nil, fmt.Errorf("Failed to send email: %v", err)
-		} else {
-			emailsSent = append(emailsSent, "Task Planning due date Update Email sent successfully")
-		}
-
-		log.Printf("Google Calendar event created: %s", event.HtmlLink)
 	}
 
 	response.Priority = updateTask.Priority
@@ -308,13 +313,20 @@ func (t *taskAndOwnerService) UpdateTaskAndOwner(task *domain.Task, manager *dom
 		response.Manager.ID = updateManager.ID
 		response.Manager.Email = updateManager.Email
 		response.Manager.UserID = updateManager.UserID
+		response.Manager.InvitationStatus = "pending"
+		if managerInvitation != nil {
+			response.Manager.InvitationID = managerInvitation.ID
+		}
 	}
 
-	// Populate employeeResponse dengan data dari updateEmployee jika tidak kosong
 	if updateEmployee.ID != 0 || updateEmployee.Email != "" || updateEmployee.UserID != 0 {
 		response.Employee.ID = updateEmployee.ID
 		response.Employee.Email = updateEmployee.Email
 		response.Employee.UserID = updateEmployee.UserID
+		response.Employee.InvitationStatus = "pending"
+		if employeeInvitation != nil {
+			response.Employee.InvitationID = employeeInvitation.ID
+		}
 	}
 
 	// Populate planningFileResponse dengan data dari updatePlanningFile jika tidak kosong
@@ -380,6 +392,40 @@ func (t *taskAndOwnerService) UpdateTaskAndOwner(task *domain.Task, manager *dom
 	response.EmailsSent = emailsSent
 
 	return response, nil
+}
+
+func (t *taskAndOwnerService) RespondToInvitation(invitationID uint64, response string) (*domain.Invitation, error) {
+	invitation, err := t.taskAndOwnerRepository.FindInvitationByID(invitationID)
+	if err != nil {
+		return nil, err
+	}
+
+	if response == "accept" {
+		invitation.Status = "accepted"
+		// Tambahkan user ke task sesuai role
+		if invitation.Role == "manager" {
+			manager := &domain.Manager{UserID: invitation.UserID}
+			_, _, _, _, _, _, _, err = t.taskAndOwnerRepository.Update(&domain.Task{ID: invitation.TaskID}, manager, nil, nil, nil)
+		} else if invitation.Role == "employee" {
+			employee := &domain.Employee{UserID: invitation.UserID}
+			_, _, _, _, _, _, _, err = t.taskAndOwnerRepository.Update(&domain.Task{ID: invitation.TaskID}, nil, employee, nil, nil)
+		}
+	} else if response == "reject" {
+		invitation.Status = "rejected"
+	} else {
+		return nil, errors.New("Invalid response")
+	}
+
+	err = t.taskAndOwnerRepository.UpdateInvitation(invitation)
+	if err != nil {
+		return nil, err
+	}
+
+	return invitation, nil
+}
+
+func (t *taskAndOwnerService) GetAllInvitations() ([]domain.Invitation, error) {
+	return t.taskAndOwnerRepository.GetAllInvitations()
 }
 
 func (t *taskAndOwnerService) UpdateValidationOwner(taskID uint, userID uint) error {

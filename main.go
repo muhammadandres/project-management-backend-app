@@ -11,7 +11,10 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/gofiber/fiber/v2/middleware/session"
 )
+
+var store *session.Store
 
 func main() {
 	// Load environment variables
@@ -28,10 +31,10 @@ func main() {
 
 	// Konfigurasi CORS
 	fiberApp.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:3000,https://manajementugas.com",
+		AllowOrigins:     "http://localhost:3000,http://127.0.0.1:5173,https://manajementugas.com",
 		AllowMethods:     "GET,POST,HEAD,PUT,DELETE,PATCH",
-		AllowHeaders:     "Origin,Content-Type,Accept,Authorization",
-		ExposeHeaders:    "Content-Length,Set-Cookie,Authorization",
+		AllowHeaders:     "Origin,Content-Type,Accept,Authorization, GoogleAuthorization",
+		ExposeHeaders:    "Content-Length,Set-Cookie,Authorization, GoogleAuthorization",
 		AllowCredentials: true,
 		MaxAge:           int((12 * time.Hour).Seconds()),
 	}))
@@ -40,8 +43,10 @@ func main() {
 	fiberApp.Use(logger.New())
 	fiberApp.Use(recover.New())
 
+	store = session.New()
+
 	// Setup routes
-	app.SetupRoutes(fiberApp, db)
+	app.SetupRoutes(fiberApp, db, store)
 
 	// Start Fiber
 	log.Fatal(fiberApp.Listen(":" + os.Getenv("PORT")))

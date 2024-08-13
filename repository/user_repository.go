@@ -1,8 +1,9 @@
 package repository
 
 import (
-	"gorm.io/gorm"
 	"manajemen_tugas_master/model/domain"
+
+	"gorm.io/gorm"
 )
 
 // UserRepository adalah interface untuk operasi-operasi yang berhubungan dengan entitas User

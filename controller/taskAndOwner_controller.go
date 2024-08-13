@@ -426,6 +426,38 @@ func (t *TaskAndOwnerController) UpdateTaskAndOwner(ctx *fiber.Ctx) error {
 	})
 }
 
+func (t *TaskAndOwnerController) RespondToInvitation(ctx *fiber.Ctx) error {
+	invitationID, err := strconv.ParseUint(ctx.Params("invitationID"), 10, 64)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid invitation ID"})
+	}
+	response := ctx.Query("response") // "accept" or "reject"
+
+	invitation, err := t.taskAndOwnerService.RespondToInvitation(invitationID, response)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(web.WebResponse{
+		Code:    200,
+		Message: "Success",
+		Data:    invitation,
+	})
+}
+
+func (t *TaskAndOwnerController) GetAllInvitations(ctx *fiber.Ctx) error {
+	invitations, err := t.taskAndOwnerService.GetAllInvitations()
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(web.WebResponse{
+		Code:    200,
+		Message: "Success",
+		Data:    invitations,
+	})
+}
+
 func (t *TaskAndOwnerController) DeleteManager(ctx *fiber.Ctx) error {
 	var userId, userOauthId uint64
 

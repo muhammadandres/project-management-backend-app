@@ -8,5 +8,5 @@ type User struct {
 	Password  string    `json:"password" gorm:"size:255"`
 	CreatedAt time.Time `json:"-"`
 	UpdatedAt time.Time `json:"-"`
-	DeletedAt time.Time `json:"-"`
+	DeletedAt *time.Time `json:"-"`
 }

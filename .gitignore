@@ -4,3 +4,5 @@
 tmp/
 .dockerignore
 .env
+credentials_Oauth.json
+credentials.json

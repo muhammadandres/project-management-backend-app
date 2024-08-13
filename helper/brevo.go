@@ -115,3 +115,40 @@ func GetCalendarInviteTemplate(summary, description string) string {
     </html>
     `, summary, description)
 }
+
+func ForgotPasswordTemplate(resetCode string) string {
+	return fmt.Sprintf(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Password Reset Code</title>
+        <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; }
+            .container { max-width: 600px; margin: 20px auto; padding: 20px; background-color: #ffffff; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+            .header { text-align: center; margin-bottom: 20px; }
+            .content { padding: 20px; background-color: #ffffff; }
+            .code { font-size: 32px; font-weight: bold; text-align: center; letter-spacing: 5px; margin: 20px 0; color: #007bff; }
+            .footer { text-align: center; margin-top: 20px; font-size: 0.8em; color: #777; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h2>Password Reset Code</h2>
+            </div>
+            <div class="content">
+                <p>Your password reset code is:</p>
+                <div class="code">%s</div>
+                <p>This code will expire in 15 minutes.</p>
+                <p>If you didn't request a password reset, please ignore this email or contact support if you have concerns.</p>
+            </div>
+            <div class="footer">
+                <p>This is an automated message. Please do not reply directly to this email.</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    `, resetCode)
+}

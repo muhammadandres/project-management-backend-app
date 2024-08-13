@@ -19,6 +19,7 @@ func NewBoardRepository(db *gorm.DB) BoardRepository {
 func (b *boardRepository) CreateBoard(board *domain.Board) (*domain.Board, error) {
 	boardDb := &domain.Board{
 		NameBoard: board.NameBoard,
+		UserID:    board.UserID,
 	}
 
 	if err := b.db.Create(boardDb).Error; err != nil {
@@ -30,18 +31,64 @@ func (b *boardRepository) CreateBoard(board *domain.Board) (*domain.Board, error
 
 func (b *boardRepository) FindById(id uint64) (*domain.Board, error) {
 	var board domain.Board
-	if err := b.db.Preload("Tasks").Preload("Tasks.Owner").Preload("Tasks.Manager").Preload("Tasks.Employee").Preload("Tasks.PlanningFile").Preload("Tasks.ProjectFile").First(&board, id).Error; err != nil {
+	if err := b.db.Preload("Tasks").
+		Preload("Tasks.Owner").
+		Preload("Tasks.Manager").
+		Preload("Tasks.Employee").
+		Preload("Tasks.PlanningFile").
+		Preload("Tasks.ProjectFile").
+		First(&board, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("board not found")
 		}
 		return nil, err
 	}
+
+	// Fetch invitation information for each task
+	for i, task := range board.Tasks {
+		var managersWithInvitation []domain.ManagerWithInvitation
+		var employeesWithInvitation []domain.EmployeeWithInvitation
+
+		// Fetch and set invitation status for managers
+		for _, manager := range task.Manager {
+			managerWithInvitation := domain.ManagerWithInvitation{Manager: manager}
+			var invitation domain.Invitation
+			if err := b.db.Where("task_id = ? AND user_id = ? AND role = ?", task.ID, manager.UserID, "manager").First(&invitation).Error; err == nil {
+				managerWithInvitation.InvitationStatus = invitation.Status
+			}
+			managersWithInvitation = append(managersWithInvitation, managerWithInvitation)
+		}
+
+		// Fetch and set invitation status for employees
+		for _, employee := range task.Employee {
+			employeeWithInvitation := domain.EmployeeWithInvitation{Employee: employee}
+			var invitation domain.Invitation
+			if err := b.db.Where("task_id = ? AND user_id = ? AND role = ?", task.ID, employee.UserID, "employee").First(&invitation).Error; err == nil {
+				employeeWithInvitation.InvitationStatus = invitation.Status
+			}
+			employeesWithInvitation = append(employeesWithInvitation, employeeWithInvitation)
+		}
+
+		// Replace the original Manager and Employee slices with the new ones containing invitation information
+		board.Tasks[i].Manager = make([]domain.Manager, len(managersWithInvitation))
+		board.Tasks[i].Employee = make([]domain.Employee, len(employeesWithInvitation))
+		for j, m := range managersWithInvitation {
+			board.Tasks[i].Manager[j] = m.Manager
+			board.Tasks[i].Manager[j].InvitationStatus = m.InvitationStatus
+		}
+		for j, e := range employeesWithInvitation {
+			board.Tasks[i].Employee[j] = e.Employee
+			board.Tasks[i].Employee[j].InvitationStatus = e.InvitationStatus
+		}
+	}
+
 	return &board, nil
 }
 
 func (b *boardRepository) GetAllBoards() ([]*domain.Board, error) {
 	var boards []*domain.Board
-	if err := b.db.Preload("Tasks").
+	if err := b.db.Preload("User").
+		Preload("Tasks").
 		Preload("Tasks.Owner").
 		Preload("Tasks.Manager").
 		Preload("Tasks.Employee").
@@ -50,6 +97,35 @@ func (b *boardRepository) GetAllBoards() ([]*domain.Board, error) {
 		Find(&boards).Error; err != nil {
 		return nil, err
 	}
+
+	for _, board := range boards {
+		for i, task := range board.Tasks {
+			taskWithInvitation := domain.TaskWithInvitation{Task: task}
+
+			// Fetch and set invitation status for managers
+			for _, manager := range task.Manager {
+				managerWithInvitation := domain.ManagerWithInvitation{Manager: manager}
+				var invitation domain.Invitation
+				if err := b.db.Where("task_id = ? AND user_id = ? AND role = ?", task.ID, manager.UserID, "manager").First(&invitation).Error; err == nil {
+					managerWithInvitation.InvitationStatus = invitation.Status
+				}
+				taskWithInvitation.ManagersWithInvitation = append(taskWithInvitation.ManagersWithInvitation, managerWithInvitation)
+			}
+
+			// Fetch and set invitation status for employees
+			for _, employee := range task.Employee {
+				employeeWithInvitation := domain.EmployeeWithInvitation{Employee: employee}
+				var invitation domain.Invitation
+				if err := b.db.Where("task_id = ? AND user_id = ? AND role = ?", task.ID, employee.UserID, "employee").First(&invitation).Error; err == nil {
+					employeeWithInvitation.InvitationStatus = invitation.Status
+				}
+				taskWithInvitation.EmployeesWithInvitation = append(taskWithInvitation.EmployeesWithInvitation, employeeWithInvitation)
+			}
+
+			board.Tasks[i] = taskWithInvitation.Task
+		}
+	}
+
 	return boards, nil
 }
 

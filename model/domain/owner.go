@@ -9,5 +9,5 @@ type Owner struct {
 	User      User      `json:"-" gorm:"foreignKey:UserID;references:ID"`
 	CreatedAt time.Time `json:"-"`
 	UpdatedAt time.Time `json:"-"`
-	DeletedAt time.Time `json:"-"`
+	DeletedAt *time.Time `json:"-"`
 }

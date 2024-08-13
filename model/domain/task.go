@@ -15,14 +15,14 @@ type Task struct {
 	NameTask            string         `json:"name_task" gorm:"size:255"`
 	PlanningDescription string         `json:"planning_description"`
 	PlanningFile        []PlanningFile `json:"planning_file"  gorm:"many2many:task_planning_files"`
-	PlanningStatus      string         `json:"planning_status" gorm:"type:enum('Approved','Not Approved')"`
+	PlanningStatus      string         `json:"planning_status" gorm:"type:enum('Approved','Not Approved');default:'Not Approved'"`
 	ProjectFile         []ProjectFile  `json:"project_file"  gorm:"many2many:task_project_files"`
-	ProjectStatus       string         `json:"project_status" gorm:"type:enum('Done','Undone','Working')"`
+	ProjectStatus       string         `json:"project_status" gorm:"type:enum('Done','Undone','Working');default:'Working'"`
 	PlanningDueDate     string         `json:"planning_due_date" gorm:"size:255"`
 	ProjectDueDate      string         `json:"project_due_date" gorm:"size:255"`
-	Priority            string         `json:"priority" gorm:"type:enum('High','Medium','Low')"`
+	Priority            string         `json:"priority" gorm:"type:enum('High','Medium','Low');default:'Medium'"`
 	ProjectComment      string         `json:"project_comment"`
 	CreatedAt           time.Time      `json:"-"`
 	UpdatedAt           time.Time      `json:"-"`
-	DeletedAt           time.Time      `json:"-"`
+	DeletedAt           *time.Time      `json:"-"`
 }

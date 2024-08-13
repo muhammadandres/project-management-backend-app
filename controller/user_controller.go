@@ -3,35 +3,43 @@ package controller
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"manajemen_tugas_master/helper"
 	"manajemen_tugas_master/model/domain"
 	"manajemen_tugas_master/model/web"
 	"manajemen_tugas_master/service"
+	"net/url"
 	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/session"
 	"golang.org/x/oauth2"
 )
 
 type UserController struct {
 	userService service.UserService
+	store       *session.Store
 }
 
-// NewUserController NewUserService menggabungkan UserController dan Userservice untuk membuat instance UserController baru,
-// yang memiliki kemampuan UserService
-func NewUserController(userService service.UserService) *UserController {
-	return &UserController{userService}
+func NewUserController(userService service.UserService, store *session.Store) *UserController {
+	return &UserController{
+		userService: userService,
+		store:       store,
+	}
 }
 
 func (c *UserController) SignupUser(ctx *fiber.Ctx) error {
-	var user *domain.User
+	var user struct {
+		*domain.User
+		TurnstileToken string `json:"turnstileToken"`
+	}
 	if err := ctx.BodyParser(&user); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
-	tokenString, err := c.userService.SignupUser(user)
+	tokenString, err := c.userService.SignupUser(user.User, user.TurnstileToken)
 	if err != nil {
 		switch {
 		case err.Error() == "Invalid format in Email":
@@ -44,8 +52,16 @@ func (c *UserController) SignupUser(ctx *fiber.Ctx) error {
 		}
 	}
 
+	// Menentukan domain
+	domain := "127.0.0.1"
+	if ctx.Hostname() == "manajementugas.com" {
+		domain = "manajementugas.com"
+	}
+
 	ctx.Cookie(&fiber.Cookie{
 		Name:    "Authorization",
+		Path:    "/",
+		Domain:  domain,
 		Value:   tokenString,
 		Expires: time.Now().Add(time.Hour * 24 * 3),
 	})
@@ -54,14 +70,16 @@ func (c *UserController) SignupUser(ctx *fiber.Ctx) error {
 }
 
 func (c *UserController) LoginUser(ctx *fiber.Ctx) error {
-	var user domain.User
+	var user struct {
+		domain.User
+		TurnstileToken string `json:"turnstileToken"`
+	}
 	if err := ctx.BodyParser(&user); err != nil {
 		log.Printf("Error parsing body: %v", err)
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
 	}
-	log.Printf("Received login request for email: %s, password length: %d", user.Email, len(user.Password))
 
-	tokenString, err := c.userService.LoginUser(&user)
+	tokenString, err := c.userService.LoginUser(&user.User, user.TurnstileToken)
 	if err != nil {
 		switch err.Error() {
 		case "User not found":
@@ -76,8 +94,16 @@ func (c *UserController) LoginUser(ctx *fiber.Ctx) error {
 		}
 	}
 
+	// Menentukan domain
+	domain := "127.0.0.1"
+	if ctx.Hostname() == "manajementugas.com" {
+		domain = "manajementugas.com"
+	}
+
 	ctx.Cookie(&fiber.Cookie{
 		Name:    "Authorization",
+		Path:    "/",
+		Domain:  domain,
 		Value:   tokenString,
 		Expires: time.Now().Add(time.Hour * 24 * 3),
 	})
@@ -86,34 +112,21 @@ func (c *UserController) LoginUser(ctx *fiber.Ctx) error {
 }
 
 func (c *UserController) GoogleOauth(ctx *fiber.Ctx) error {
-	config, err := helper.SetupGoogleAuth()
-	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-	}
+	config := helper.SetupGoogleAuth()
+	url := config.AuthCodeURL("state", oauth2.AccessTypeOffline)
 
-	state := helper.GenerateRandomState()
-	url := config.AuthCodeURL(state, oauth2.AccessTypeOffline)
-	ctx.Cookie(&fiber.Cookie{
-		Name:    "oauthstate",
-		Value:   state,
-		Expires: time.Now().Add(time.Hour),
+	fmt.Println("Authorization URL:", url)
+	fmt.Println("Request headers:", ctx.GetReqHeaders())
+
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"authorizationUrl": url,
 	})
-	return ctx.Redirect(url, fiber.StatusTemporaryRedirect)
 }
 
 func (c *UserController) GoogleCallback(ctx *fiber.Ctx) error {
-	state := ctx.Query("state")
-	storedState := ctx.Cookies("oauthstate")
-	if state != storedState {
-		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid OAuth state"})
-	}
-
 	code := ctx.Query("code")
-	config, err := helper.SetupGoogleAuth()
-	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-	}
 
+	config := helper.SetupGoogleAuth()
 	t, err := config.Exchange(context.Background(), code)
 	if err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
@@ -132,48 +145,79 @@ func (c *UserController) GoogleCallback(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	// Mendapatkan email dari userData
 	email, ok := userData["email"].(string)
 	if !ok {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Email not found in user data"})
 	}
 
-	// validasi user ke repository
 	if err := c.userService.GoogleOauth(email); err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	ctx.Locals("sessionEmail", email) // Menyimpan email di ctx.locals
+	// Menggunakan sesi untuk menyimpan email
+	sess, err := c.store.Get(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Gagal mendapatkan sesi"})
+	}
+
+	sess.Set("email", email)
+	if err := sess.Save(); err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Gagal menyimpan sesi"})
+	}
+
+	domain := "127.0.0.1"
+	if ctx.Hostname() == "manajementugas.com" {
+		domain = "manajementugas.com"
+	}
+
 	ctx.Cookie(&fiber.Cookie{
 		Name:    "GoogleAuthorization",
+		Path:    "/",
+		Domain:  domain,
 		Value:   t.AccessToken,
 		Expires: time.Now().Add(time.Hour * 24 * 3),
 	})
 
-	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Login successfully"})
+	// Redirect ke frontend dengan email sebagai parameter
+	frontendURL := "http://127.0.0.1:5173" // Ganti dengan URL frontend
+
+	encodedEmail := url.QueryEscape(email)
+	encodedToken := url.QueryEscape(t.AccessToken)
+	redirectURL := fmt.Sprintf("%s/auth-success?email=%s&token=%s", frontendURL, encodedEmail, encodedToken)
+	return ctx.Redirect(redirectURL)
 }
 
 func (c *UserController) ForgotPassword(ctx *fiber.Ctx) error {
 	var request struct {
+		Email string `json:"email"`
+	}
+	if err := ctx.BodyParser(&request); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	err := c.userService.InitiateForgotPassword(request.Email)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "Reset code has been sent to your email",
+	})
+}
+
+func (c *UserController) ResetPassword(ctx *fiber.Ctx) error {
+	var request struct {
 		Email       string `json:"email"`
+		ResetCode   string `json:"reset_code"`
 		NewPassword string `json:"new_password"`
 	}
 	if err := ctx.BodyParser(&request); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
-	err := c.userService.ForgotPassword(request.Email, request.NewPassword)
+	err := c.userService.ResetPassword(request.Email, request.ResetCode, request.NewPassword)
 	if err != nil {
-		switch err.Error() {
-		case "User not found":
-			return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
-		case "Invalid format in Email":
-			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid email format"})
-		case "Invalid password format":
-			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid password format"})
-		default:
-			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Internal server error"})
-		}
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{

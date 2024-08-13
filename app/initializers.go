@@ -6,6 +6,7 @@ import (
 	"manajemen_tugas_master/service"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/gofiber/fiber/v2/middleware/session"
 	"gorm.io/gorm"
 )
 
@@ -18,8 +19,8 @@ func InitializeServiceUser(userRepository repository.UserRepository) (service.Us
 	return service.NewUserService(userRepository, validator.New()), nil
 }
 
-func InitializeControllerUser(userService service.UserService) (controller.UserController, error) {
-	return *controller.NewUserController(userService), nil
+func InitializeControllerUser(userService service.UserService, store *session.Store) (controller.UserController, error) {
+	return *controller.NewUserController(userService, store), nil
 }
 
 // board

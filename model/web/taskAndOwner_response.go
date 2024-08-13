@@ -14,14 +14,18 @@ type UpdateResponse struct {
 	Priority            string `json:"priority,omitempty"`
 	ProjectComment      string `json:"project_comment,omitempty"`
 	Manager             struct {
-		ID     uint64 `json:"id,omitempty"`
-		Email  string `json:"email,omitempty"`
-		UserID uint64 `json:"user_id,omitempty"`
+		ID               uint64 `json:"id,omitempty"`
+		Email            string `json:"email,omitempty"`
+		UserID           uint64 `json:"user_id,omitempty"`
+		InvitationStatus string `json:"invitation_status,omitempty"`
+		InvitationID     uint64 `json:"invitation_id,omitempty"`
 	} `json:"manager,omitempty"`
 	Employee struct {
-		ID     uint64 `json:"id,omitempty"`
-		Email  string `json:"email,omitempty"`
-		UserID uint64 `json:"user_id,omitempty"`
+		ID               uint64 `json:"id,omitempty"`
+		Email            string `json:"email,omitempty"`
+		UserID           uint64 `json:"user_id,omitempty"`
+		InvitationStatus string `json:"invitation_status,omitempty"`
+		InvitationID     uint64 `json:"invitation_id,omitempty"`
 	} `json:"employee,omitempty"`
 	PlanningFile struct {
 		ID       uint64 `json:"id,omitempty"`
@@ -36,55 +40,21 @@ type UpdateResponse struct {
 	EmailsSent []string `json:"emails_sent,omitempty"`
 }
 
-func CreateResponseTask(taskModel *domain.Task) WebResponse {
+func CreateResponseTask(taskModel *domain.TaskWithInvitation) WebResponse {
 	return WebResponse{
 		Code:    200,
 		Message: "Success",
-		Data: domain.Task{
-
-			ID:                  taskModel.ID,
-			OwnerID:             taskModel.OwnerID,
-			Owner:               taskModel.Owner,
-			Manager:             taskModel.Manager,
-			Employee:            taskModel.Employee,
-			NameTask:            taskModel.NameTask,
-			PlanningDescription: taskModel.PlanningDescription,
-			PlanningFile:        taskModel.PlanningFile,
-			PlanningStatus:      taskModel.PlanningStatus,
-			ProjectFile:         taskModel.ProjectFile,
-			ProjectStatus:       taskModel.ProjectStatus,
-			PlanningDueDate:     taskModel.PlanningDueDate,
-			ProjectDueDate:      taskModel.ProjectDueDate,
-			Priority:            taskModel.Priority,
-			ProjectComment:      taskModel.ProjectComment,
-		},
+		Data:    taskModel,
 	}
 }
 
-func CreateResponseTasks(tasksModel []*domain.Task) []WebResponse {
+func CreateResponseTasks(tasksModel []*domain.TaskWithInvitation) []WebResponse {
 	var response []WebResponse
 	for _, taskModel := range tasksModel {
 		response = append(response, WebResponse{
 			Code:    200,
 			Message: "Success",
-			Data: domain.Task{
-				BoardID:             taskModel.BoardID,
-				ID:                  taskModel.ID,
-				OwnerID:             taskModel.OwnerID,
-				Owner:               taskModel.Owner,
-				Manager:             taskModel.Manager,
-				Employee:            taskModel.Employee,
-				NameTask:            taskModel.NameTask,
-				PlanningDescription: taskModel.PlanningDescription,
-				PlanningFile:        taskModel.PlanningFile,
-				PlanningStatus:      taskModel.PlanningStatus,
-				ProjectFile:         taskModel.ProjectFile,
-				ProjectStatus:       taskModel.ProjectStatus,
-				PlanningDueDate:     taskModel.PlanningDueDate,
-				ProjectDueDate:      taskModel.ProjectDueDate,
-				Priority:            taskModel.Priority,
-				ProjectComment:      taskModel.ProjectComment,
-			},
+			Data:    taskModel,
 		})
 	}
 	return response

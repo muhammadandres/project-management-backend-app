@@ -20,6 +20,10 @@ func (s *boardService) CreateBoard(board *domain.Board) (*domain.Board, error) {
 		return nil, errors.New("Masukkan nama board terlebih dahulu")
 	}
 
+	if board.UserID == 0 {
+		return nil, errors.New("User ID tidak valid")
+	}
+
 	boardDb, err := s.boardRepository.CreateBoard(board)
 	if err != nil {
 		return nil, err

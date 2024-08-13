@@ -7,8 +7,8 @@ import (
 
 type TaskAndOwnerService interface {
 	CreateTaskAndOwner(user *domain.User, task *domain.Task, board *domain.Board) (*domain.Task, *domain.Owner, error)
-	GetTaskAndOwnerById(id uint) (*domain.Task, error)
-	FindAllTasksAndOwners() ([]*domain.Task, error)
+	GetTaskAndOwnerById(id uint) (*domain.TaskWithInvitation, error)
+	FindAllTasksAndOwners() ([]*domain.TaskWithInvitation, error)
 	FindAllOwners() ([]*domain.Task, error)
 	FindAllManagers() ([]*domain.Task, error)
 	FindAllEmployees() ([]*domain.Task, error)
@@ -23,4 +23,7 @@ type TaskAndOwnerService interface {
 	DeletePlanningFile(fileId uint) (string, error)
 	DeleteProjectFile(fileId uint) (string, error)
 	DeleteTaskAndOwner(taskID uint) error
+
+	RespondToInvitation(invitationID uint64, response string) (*domain.Invitation, error)
+	GetAllInvitations() ([]domain.Invitation, error)
 }

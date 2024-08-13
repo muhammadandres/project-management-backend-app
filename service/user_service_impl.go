@@ -7,6 +7,7 @@ import (
 	"manajemen_tugas_master/model/domain"
 	"manajemen_tugas_master/repository"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -17,15 +18,28 @@ import (
 type userService struct {
 	userRepository repository.UserRepository
 	validator      *validator.Validate
+	resetCodes     map[string]resetCodeInfo
+	resetMutex     sync.Mutex
 }
 
-// NewUserService menggabungkan userService dan Userservice untuk membuat instance UserService baru,
-// yang memiliki kemampuan UserRepository dan validate
+type resetCodeInfo struct {
+	code      string
+	expiresAt time.Time
+}
+
 func NewUserService(userRepository repository.UserRepository, validator *validator.Validate) UserService {
-	return &userService{userRepository, validator}
+	return &userService{
+		userRepository: userRepository,
+		validator:      validator,
+		resetCodes:     make(map[string]resetCodeInfo),
+	}
 }
 
-func (s *userService) SignupUser(user *domain.User) (string, error) {
+func (s *userService) SignupUser(user *domain.User, turnstileToken string) (string, error) {
+	if err := helper.VerifyTurnstileToken(turnstileToken); err != nil {
+		return "", err
+	}
+
 	if err := s.validator.Struct(user); err != nil {
 		// Jika terjadi kesalahan validasi, konversikan ke satu pesan kesalahan
 		var errMsg string
@@ -68,7 +82,11 @@ func (s *userService) SignupUser(user *domain.User) (string, error) {
 	return tokenString, nil
 }
 
-func (s *userService) LoginUser(user *domain.User) (string, error) {
+func (s *userService) LoginUser(user *domain.User, turnstileToken string) (string, error) {
+	if err := helper.VerifyTurnstileToken(turnstileToken); err != nil {
+		return "", err
+	}
+
 	if err := s.validator.Struct(user); err != nil {
 		var errMsg string
 		validationErrors := err.(validator.ValidationErrors)
@@ -155,13 +173,56 @@ func (s *userService) RequireOauth(email string) (*domain.User, error) {
 	return user, nil
 }
 
-func (s *userService) ForgotPassword(email, newPassword string) error {
+func (s *userService) InitiateForgotPassword(email string) error {
 	if err := s.validator.Var(email, "required,email"); err != nil {
-		return errors.New("Invalid format in Email")
+		return errors.New("Invalid email format")
+	}
+
+	// Periksa apakah user ada, tanpa menyimpan hasilnya ke variabel
+	_, err := s.userRepository.GetUserByEmail(email)
+	if err != nil {
+		return errors.New("User not found")
+	}
+
+	resetCode := helper.GenerateRandomCode(5)
+
+	s.resetMutex.Lock()
+	s.resetCodes[email] = resetCodeInfo{
+		code:      resetCode,
+		expiresAt: time.Now().Add(15 * time.Minute),
+	}
+	s.resetMutex.Unlock()
+
+	subject := "Password Reset Code"
+	body := helper.ForgotPasswordTemplate(resetCode)
+
+	err = helper.SendEmail([]string{email}, subject, body)
+	if err != nil {
+		return errors.New("Failed to send reset email")
+	}
+
+	return nil
+}
+
+func (s *userService) ResetPassword(email, resetCode, newPassword string) error {
+	if err := s.validator.Var(email, "required,email"); err != nil {
+		return errors.New("Invalid email format")
 	}
 
 	if err := s.validator.Var(newPassword, "required,min=6"); err != nil {
 		return errors.New("Invalid password format")
+	}
+
+	s.resetMutex.Lock()
+	storedReset, exists := s.resetCodes[email]
+	s.resetMutex.Unlock()
+
+	if !exists || storedReset.code != resetCode {
+		return errors.New("Invalid reset code")
+	}
+
+	if time.Now().After(storedReset.expiresAt) {
+		return errors.New("Reset code has expired")
 	}
 
 	user, err := s.userRepository.GetUserByEmail(email)
@@ -169,17 +230,19 @@ func (s *userService) ForgotPassword(email, newPassword string) error {
 		return errors.New("User not found")
 	}
 
-	// Hash kata sandi baru
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), 10)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {
 		return errors.New("Failed to hash new password")
 	}
 
-	// Simpan kata sandi baru yang sudah di-hash
 	err = s.userRepository.UpdatePassword(user.ID, string(hashedPassword))
 	if err != nil {
 		return errors.New("Failed to update password")
 	}
+
+	s.resetMutex.Lock()
+	delete(s.resetCodes, email)
+	s.resetMutex.Unlock()
 
 	return nil
 }

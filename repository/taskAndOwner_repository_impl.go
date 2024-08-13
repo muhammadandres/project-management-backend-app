@@ -37,53 +37,73 @@ func (t *taskAndOwnerRepository) Create(user *domain.User, task *domain.Task, bo
 	return task, &Owner, nil
 }
 
-func (t *taskAndOwnerRepository) FindById(id uint) (*domain.Task, error) {
+func (t *taskAndOwnerRepository) FindById(id uint) (*domain.TaskWithInvitation, error) {
 	var task domain.Task
-	var owner domain.Owner
-
-	// Mencari data owner
-	if err := t.db.Find(&owner).Error; err != nil {
-		return nil, errors.New("Owner not found")
-	}
-	// Mencari semua data task tertentu dengan semua relasinya
-	if err := t.db.Preload("PlanningFile").Preload("ProjectFile").Preload("Manager").Preload("Employee").First(&task, id).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("Task not found")
-		}
+	if err := t.db.Preload("Owner").Preload("Manager").Preload("Employee").Preload("PlanningFile").Preload("ProjectFile").Preload("Board").First(&task, id).Error; err != nil {
 		return nil, err
 	}
 
-	// Mengisi informasi owner pada task
-	task.Owner = owner
+	taskWithInvitation := &domain.TaskWithInvitation{Task: task}
 
-	return &task, nil
-}
-
-func (t *taskAndOwnerRepository) FindAll() ([]*domain.Task, error) {
-	var tasks []*domain.Task
-	var owners []*domain.Owner
-
-	// Fetch all owners
-	if err := t.db.Find(&owners).Error; err != nil {
-		return nil, errors.New("Owner not found")
+	// Fetch and set invitation status for managers
+	for _, manager := range task.Manager {
+		managerWithInvitation := domain.ManagerWithInvitation{Manager: manager}
+		var invitation domain.Invitation
+		if err := t.db.Where("task_id = ? AND user_id = ? AND role = ?", task.ID, manager.UserID, "manager").First(&invitation).Error; err == nil {
+			managerWithInvitation.InvitationStatus = invitation.Status
+		}
+		taskWithInvitation.ManagersWithInvitation = append(taskWithInvitation.ManagersWithInvitation, managerWithInvitation)
 	}
 
+	// Fetch and set invitation status for employees
+	for _, employee := range task.Employee {
+		employeeWithInvitation := domain.EmployeeWithInvitation{Employee: employee}
+		var invitation domain.Invitation
+		if err := t.db.Where("task_id = ? AND user_id = ? AND role = ?", task.ID, employee.UserID, "employee").First(&invitation).Error; err == nil {
+			employeeWithInvitation.InvitationStatus = invitation.Status
+		}
+		taskWithInvitation.EmployeesWithInvitation = append(taskWithInvitation.EmployeesWithInvitation, employeeWithInvitation)
+	}
+
+	return taskWithInvitation, nil
+}
+
+func (t *taskAndOwnerRepository) FindAll() ([]*domain.TaskWithInvitation, error) {
+	var tasks []*domain.Task
+	var tasksWithInvitation []*domain.TaskWithInvitation
+
 	// Fetch all tasks with their relations, including Board
-	if err := t.db.Preload("Manager").Preload("Employee").Preload("PlanningFile").Preload("ProjectFile").Preload("Board").Find(&tasks).Error; err != nil {
+	if err := t.db.Preload("Owner").Preload("Manager").Preload("Employee").Preload("PlanningFile").Preload("ProjectFile").Preload("Board").Find(&tasks).Error; err != nil {
 		return nil, errors.New("Task not found")
 	}
 
-	// Fill owner information for each task
 	for _, task := range tasks {
-		for _, owner := range owners {
-			if owner.ID == task.OwnerID {
-				task.Owner = *owner
-				break
+		taskWithInvitation := &domain.TaskWithInvitation{Task: *task}
+
+		// Fetch and set invitation status for managers
+		for _, manager := range task.Manager {
+			managerWithInvitation := domain.ManagerWithInvitation{Manager: manager}
+			var invitation domain.Invitation
+			if err := t.db.Where("task_id = ? AND user_id = ? AND role = ?", task.ID, manager.UserID, "manager").First(&invitation).Error; err == nil {
+				managerWithInvitation.InvitationStatus = invitation.Status
 			}
+			taskWithInvitation.ManagersWithInvitation = append(taskWithInvitation.ManagersWithInvitation, managerWithInvitation)
 		}
+
+		// Fetch and set invitation status for employees
+		for _, employee := range task.Employee {
+			employeeWithInvitation := domain.EmployeeWithInvitation{Employee: employee}
+			var invitation domain.Invitation
+			if err := t.db.Where("task_id = ? AND user_id = ? AND role = ?", task.ID, employee.UserID, "employee").First(&invitation).Error; err == nil {
+				employeeWithInvitation.InvitationStatus = invitation.Status
+			}
+			taskWithInvitation.EmployeesWithInvitation = append(taskWithInvitation.EmployeesWithInvitation, employeeWithInvitation)
+		}
+
+		tasksWithInvitation = append(tasksWithInvitation, taskWithInvitation)
 	}
 
-	return tasks, nil
+	return tasksWithInvitation, nil
 }
 
 func (t *taskAndOwnerRepository) FindAllOwners() ([]*domain.Task, error) {
@@ -179,11 +199,46 @@ func (t *taskAndOwnerRepository) GetNameEmailsDescription(taskID uint64) (ownerE
 	return ownerEmail, managerEmails, employeeEmails, description, nametask, nil
 }
 
-func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manager, employee *domain.Employee, planningFile *domain.PlanningFile, projectFile *domain.ProjectFile) (*domain.Task, *domain.Manager, *domain.Employee, *domain.PlanningFile, *domain.ProjectFile, error) {
+func (t *taskAndOwnerRepository) CreateInvitation(invitation *domain.Invitation) (*domain.Invitation, error) {
+	if err := t.db.Create(invitation).Error; err != nil {
+		return nil, err
+	}
+	return invitation, nil
+}
+
+func (t *taskAndOwnerRepository) FindInvitationByID(id uint64) (*domain.Invitation, error) {
+	var invitation domain.Invitation
+	err := t.db.Preload("User").First(&invitation, id).Error
+	if err != nil {
+		return nil, err
+	}
+	invitation.UserEmail = invitation.User.Email
+	return &invitation, nil
+}
+
+func (t *taskAndOwnerRepository) UpdateInvitation(invitation *domain.Invitation) error {
+	return t.db.Save(invitation).Error
+}
+
+func (t *taskAndOwnerRepository) GetAllInvitations() ([]domain.Invitation, error) {
+	var invitations []domain.Invitation
+	err := t.db.Preload("User").Find(&invitations).Error
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range invitations {
+		invitations[i].UserEmail = invitations[i].User.Email
+	}
+
+	return invitations, nil
+}
+
+func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manager, employee *domain.Employee, planningFile *domain.PlanningFile, projectFile *domain.ProjectFile) (*domain.Task, *domain.Manager, *domain.Employee, *domain.PlanningFile, *domain.ProjectFile, *domain.Invitation, *domain.Invitation, error) {
 	// Ambil task yang ada dari database
 	existingTask := &domain.Task{}
 	if err := t.db.First(existingTask, task.ID).Error; err != nil {
-		return nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, nil, nil, err
 	}
 
 	// Update hanya field yang tidak kosong
@@ -216,29 +271,56 @@ func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manag
 	// Jika ada update, lakukan update
 	if len(updates) > 0 {
 		if err := t.db.Model(existingTask).Updates(updates).Error; err != nil {
-			return nil, nil, nil, nil, nil, err
+			return nil, nil, nil, nil, nil, nil, nil, err
 		}
 	}
+
+	var managerInvitation, employeeInvitation *domain.Invitation
 
 	// Simpan manager
 	if manager != nil && (manager.Email != "") {
 		var user domain.User
 		if err := t.db.First(&user, "email = ?", manager.Email).Error; err != nil {
-			return nil, nil, nil, nil, nil, errors.New("User not found")
+			return nil, nil, nil, nil, nil, nil, nil, errors.New("User not found")
 		}
+
+		// Cek apakah sudah ada undangan yang pending untuk user ini
+		var countPendingInvitation int64
+		err := t.db.Model(&domain.Invitation{}).
+			Where("user_id = ? AND task_id = ? AND role = ? AND status = ?", user.ID, task.ID, "manager", "pending").
+			Count(&countPendingInvitation).Error
+		if err != nil {
+			return nil, nil, nil, nil, nil, nil, nil, err
+		}
+		if countPendingInvitation > 0 {
+			return nil, nil, nil, nil, nil, nil, nil, errors.New("Invitation already sent to this user")
+		}
+
+		// Buat undangan baru
+		invitation := &domain.Invitation{
+			TaskID: task.ID,
+			UserID: user.ID,
+			Role:   "manager",
+			Status: "pending",
+		}
+		createdInvitation, err := t.CreateInvitation(invitation)
+		if err != nil {
+			return nil, nil, nil, nil, nil, nil, nil, errors.New("Failed to create invitation")
+		}
+		managerInvitation = createdInvitation
 
 		// validasi agar ada tidak ada user yang sama pada manager
 		var countManager int64
-		err := t.db.Model(&domain.Manager{}).
+		err = t.db.Model(&domain.Manager{}).
 			Where("user_id = ?", user.ID).                                         // Filter by user_id
 			Joins("JOIN task_managers ON task_managers.manager_id = managers.id"). // Join with task_managers
 			Where("task_managers.task_id = ?", task.ID).                           // Filter by task_id
 			Count(&countManager).Error
 		if err != nil {
-			return nil, nil, nil, nil, nil, err
+			return nil, nil, nil, nil, nil, nil, nil, err
 		}
 		if countManager > 0 {
-			return nil, nil, nil, nil, nil, errors.New("User is already assigned as manager to a task")
+			return nil, nil, nil, nil, nil, nil, nil, errors.New("User is already assigned as manager to a task")
 		}
 
 		// validasi agar user yang telah menjadi employee tidak bisa menjadi manager lagi pada task yang sama.
@@ -249,19 +331,19 @@ func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manag
 			Where("task_employees.task_id = ?", task.ID).                              // Filter by task_id
 			Count(&countEmployee).Error
 		if err != nil {
-			return nil, nil, nil, nil, nil, err
+			return nil, nil, nil, nil, nil, nil, nil, err
 		}
 		if countEmployee > 0 {
-			return nil, nil, nil, nil, nil, errors.New("User is already assigned as employee to a task")
+			return nil, nil, nil, nil, nil, nil, nil, errors.New("User is already assigned as employee to a task")
 		} else {
 			// jika kedua validasi tersebut berhasil masukkan data ke table penghubung
 			manager.UserID = user.ID
 			if err := t.db.Save(manager).Error; err != nil {
-				return nil, nil, nil, nil, nil, errors.New("Failed to save manager data")
+				return nil, nil, nil, nil, nil, nil, nil, errors.New("Failed to save manager data")
 			}
 			sqlQuery := "INSERT INTO task_managers (task_id, manager_id) VALUES (?, ?)"
 			if err := t.db.Exec(sqlQuery, task.ID, manager.ID).Error; err != nil {
-				return nil, nil, nil, nil, nil, err
+				return nil, nil, nil, nil, nil, nil, nil, err
 			}
 		}
 	}
@@ -270,21 +352,46 @@ func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manag
 	if employee != nil && (employee.Email != "") {
 		var user domain.User
 		if err := t.db.First(&user, "email = ?", employee.Email).Error; err != nil {
-			return nil, nil, nil, nil, nil, errors.New("User not found")
+			return nil, nil, nil, nil, nil, nil, nil, errors.New("User not found")
 		}
+
+		// Cek apakah sudah ada undangan yang pending untuk user ini
+		var countPendingInvitation int64
+		err := t.db.Model(&domain.Invitation{}).
+			Where("user_id = ? AND task_id = ? AND role = ? AND status = ?", user.ID, task.ID, "employee", "pending").
+			Count(&countPendingInvitation).Error
+		if err != nil {
+			return nil, nil, nil, nil, nil, nil, nil, err
+		}
+		if countPendingInvitation > 0 {
+			return nil, nil, nil, nil, nil, nil, nil, errors.New("Invitation already sent to this user")
+		}
+
+		// Buat undangan baru
+		invitation := &domain.Invitation{
+			TaskID: task.ID,
+			UserID: user.ID,
+			Role:   "employee",
+			Status: "pending",
+		}
+		createdInvitation, err := t.CreateInvitation(invitation)
+		if err != nil {
+			return nil, nil, nil, nil, nil, nil, nil, errors.New("Failed to create invitation")
+		}
+		employeeInvitation = createdInvitation
 
 		// validasi agar ada tidak ada user yang sama pada employee
 		var countEmployee int64
-		err := t.db.Model(&domain.Employee{}).
+		err = t.db.Model(&domain.Employee{}).
 			Where("user_id = ?", user.ID).                                             // Filter by user_id
 			Joins("JOIN task_employees ON task_employees.employee_id = employees.id"). // Join with task_employees
 			Where("task_employees.task_id = ?", task.ID).                              // Filter by task_id
 			Count(&countEmployee).Error
 		if err != nil {
-			return nil, nil, nil, nil, nil, err
+			return nil, nil, nil, nil, nil, nil, nil, err
 		}
 		if countEmployee > 0 {
-			return nil, nil, nil, nil, nil, errors.New("User is already assigned as employee to a task")
+			return nil, nil, nil, nil, nil, nil, nil, errors.New("User is already assigned as employee to a task")
 		}
 
 		// validasi agar user yang telah menjadi manager tidak bisa menjadi employee lagi pada task yang sama.
@@ -295,19 +402,19 @@ func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manag
 			Where("task_managers.task_id = ?", task.ID).                           // Filter by task_id
 			Count(&countManager).Error
 		if err != nil {
-			return nil, nil, nil, nil, nil, err
+			return nil, nil, nil, nil, nil, nil, nil, err
 		}
 		if countManager > 0 {
-			return nil, nil, nil, nil, nil, errors.New("User is already assigned as manager to a task")
+			return nil, nil, nil, nil, nil, nil, nil, errors.New("User is already assigned as manager to a task")
 		} else {
 			// jika kedua validasi tersebut berhasil masukkan data ke table penghubung
 			employee.UserID = user.ID
 			if err := t.db.Save(employee).Error; err != nil {
-				return nil, nil, nil, nil, nil, errors.New("Failed to save manager data")
+				return nil, nil, nil, nil, nil, nil, nil, errors.New("Failed to save manager data")
 			}
 			sqlQuery := "INSERT INTO task_employees (task_id, employee_id) VALUES (?, ?)"
 			if err := t.db.Exec(sqlQuery, task.ID, employee.ID).Error; err != nil {
-				return nil, nil, nil, nil, nil, err
+				return nil, nil, nil, nil, nil, nil, nil, err
 			}
 		}
 	}
@@ -316,19 +423,19 @@ func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manag
 	if planningFile != nil && (planningFile.FileUrl != "" || planningFile.FileName != "") {
 		var count int64
 		if err := t.db.Model(&domain.PlanningFile{}).Where("file_url", planningFile.FileUrl).Count(&count).Error; err != nil {
-			return nil, nil, nil, nil, nil, err
+			return nil, nil, nil, nil, nil, nil, nil, err
 		}
 		if count > 0 {
-			return nil, nil, nil, nil, nil, errors.New("File already exist")
+			return nil, nil, nil, nil, nil, nil, nil, errors.New("File already exist")
 		}
 		if count == 0 {
 			if err := t.db.Save(planningFile).Error; err != nil {
-				return nil, nil, nil, nil, nil, fmt.Errorf("Failed to upload file: %v", err)
+				return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("Failed to upload file: %v", err)
 			}
 			// Eksekusi query SQL untuk menambahkan relasi task_project_files
 			sqlQuery := "INSERT INTO task_planning_files (task_id, planning_file_id) VALUES (?, ?)"
 			if err := t.db.Exec(sqlQuery, task.ID, planningFile.ID).Error; err != nil {
-				return nil, nil, nil, nil, nil, err
+				return nil, nil, nil, nil, nil, nil, nil, err
 			}
 		}
 	}
@@ -337,24 +444,24 @@ func (t *taskAndOwnerRepository) Update(task *domain.Task, manager *domain.Manag
 	if projectFile != nil && (projectFile.FileUrl != "" || projectFile.FileName != "") {
 		var count int64
 		if err := t.db.Model(&domain.ProjectFile{}).Where("file_url", projectFile.FileUrl).Count(&count).Error; err != nil {
-			return nil, nil, nil, nil, nil, err
+			return nil, nil, nil, nil, nil, nil, nil, err
 		}
 		if count > 0 {
-			return nil, nil, nil, nil, nil, errors.New("File already exist")
+			return nil, nil, nil, nil, nil, nil, nil, errors.New("File already exist")
 		}
 		if count == 0 {
 			if err := t.db.Save(projectFile).Error; err != nil {
-				return nil, nil, nil, nil, nil, fmt.Errorf("Failed to upload file: %v", err)
+				return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("Failed to upload file: %v", err)
 			}
 			// Eksekusi query SQL untuk menambahkan relasi task_project_files
 			sqlQuery := "INSERT INTO task_project_files (task_id, project_file_id) VALUES (?, ?)"
 			if err := t.db.Exec(sqlQuery, task.ID, projectFile.ID).Error; err != nil {
-				return nil, nil, nil, nil, nil, err
+				return nil, nil, nil, nil, nil, nil, nil, err
 			}
 		}
 	}
 
-	return task, manager, employee, planningFile, projectFile, nil
+	return task, manager, employee, planningFile, projectFile, managerInvitation, employeeInvitation, nil
 }
 
 func (t *taskAndOwnerRepository) UpdateValidationOwner(taskID uint, userID uint) error {

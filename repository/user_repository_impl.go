@@ -84,13 +84,7 @@ func (r *userRepository) GetUserByEmail(email string) (*domain.User, error) {
 
 func (r *userRepository) UpdatePassword(userID uint64, newPassword string) error {
 	result := r.db.Model(&domain.User{}).Where("id = ?", userID).Update("password", newPassword)
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return errors.New("No user found with the given ID")
-	}
-	return nil
+	return result.Error
 }
 
 func (r *userRepository) FindById(id interface{}) (*domain.User, error) {

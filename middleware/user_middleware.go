@@ -1,16 +1,23 @@
 package middleware
 
 import (
+	"fmt"
 	"manajemen_tugas_master/service"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/session"
 )
 
-func AuthUser(userService service.UserService) fiber.Handler {
+func AuthUser(userService service.UserService, store *session.Store) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		// Get the cookies from request
-		tokenStringJwt := ctx.Cookies("Authorization")
-		tokenStringOauth := ctx.Cookies("GoogleAuthorization")
+		// tokenStringJwt := ctx.Cookies("Authorization")
+		tokenStringJwt := ctx.Get("Authorization")
+		tokenStringOauth := ctx.Get("GoogleAuthorization")
+		// tokenStringOauth := ctx.Cookies("GoogleAuthorization")
+
+		fmt.Println("Authorization Token:", tokenStringJwt)
+		fmt.Println("GoogleAuthorization Token:", tokenStringOauth)
 
 		// Validate tokenStringJwt
 		if tokenStringJwt != "" {
@@ -26,7 +33,12 @@ func AuthUser(userService service.UserService) fiber.Handler {
 
 		// Validate tokenStringOauth
 		if tokenStringOauth != "" {
-			email := ctx.Locals("sessionEmail")
+			sess, err := store.Get(ctx)
+			if err != nil {
+				return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Gagal mendapatkan sesi"})
+			}
+
+			email := sess.Get("email")
 			if email == nil {
 				return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Google OAuth session not found"})
 			}
@@ -41,7 +53,6 @@ func AuthUser(userService service.UserService) fiber.Handler {
 				return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid Google OAuth session"})
 			}
 
-			// Store OAuth user data in context
 			ctx.Locals("userOauth", user)
 		}
 
