@@ -42,9 +42,7 @@ func main() {
 
 	store = session.New()
 
-	// Setup routes
 	app.SetupRoutes(fiberApp, db, store)
 
-	// Start Fiber
 	log.Fatal(fiberApp.Listen(":" + os.Getenv("PORT")))
 }
