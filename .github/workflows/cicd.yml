@@ -38,7 +38,7 @@ jobs:
             - name: Pull Docker image
               run: docker pull muhammadandres/manajementugasapp:latest        
             - name: Delete old container
-              run: docker rm -f manajemen-tugas-container || true   
+              run: docker rm -f manajemen-tugas-container || true
             - name: Run Docker container
               env:
                 PORT: ${{ secrets.PORT }}
