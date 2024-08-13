@@ -8,14 +8,11 @@ jobs:
         runs-on: ubuntu-latest 
         steps:
             - name: Checkout Source
-              uses: actions/checkout@v4
-            
+              uses: actions/checkout@v4       
             - name: Login to Docker Hub
-              run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_ACCESS_TOKEN }}
-            
+              run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_ACCESS_TOKEN }}      
             - name: Build Docker image
-              run: docker build -t muhammadandres/manajementugasapp .
-            
+              run: docker build -t muhammadandres/manajementugasapp .          
             - name: Push image to Docker Hub
               run: docker push muhammadandres/manajementugasapp:latest
     
@@ -28,22 +25,18 @@ jobs:
               with:
                 aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
                 aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-                aws-region: ${{ secrets.AWS_REGION }}
-            
+                aws-region: ${{ secrets.AWS_REGION }}  
             - name: Install AWS CLI v2
               run: |
                 sudo apt-get update && sudo apt-get install -y unzip
                 curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
                 unzip -o awscliv2.zip
                 sudo ./aws/install --update
-              shell: bash
-            
+              shell: bash          
             - name: Pull Docker image
-              run: docker pull muhammadandres/manajementugasapp:latest
-            
+              run: docker pull muhammadandres/manajementugasapp:latest        
             - name: Delete old container
-              run: docker rm -f manajemen-tugas-container || true
-            
+              run: docker rm -f manajemen-tugas-container || true   
             - name: Run Docker container
               env:
                 PORT: ${{ secrets.PORT }}
