@@ -32,7 +32,7 @@ jobs:
                 curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
                 unzip -o awscliv2.zip
                 sudo ./aws/install --update
-              shell: bash          
+              shell: bash
             - name: Pull Docker image
               run: docker pull muhammadandres/manajementugasapp:latest        
             - name: Delete old container
