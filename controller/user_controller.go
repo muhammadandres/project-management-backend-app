@@ -31,15 +31,12 @@ func NewUserController(userService service.UserService, store *session.Store) *U
 }
 
 func (c *UserController) SignupUser(ctx *fiber.Ctx) error {
-	var user struct {
-		*domain.User
-		TurnstileToken string `json:"turnstileToken"`
-	}
+	var user *domain.User
 	if err := ctx.BodyParser(&user); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
-	tokenString, err := c.userService.SignupUser(user.User, user.TurnstileToken)
+	tokenString, err := c.userService.SignupUser(user)
 	if err != nil {
 		switch {
 		case err.Error() == "Invalid format in Email":
@@ -54,8 +51,8 @@ func (c *UserController) SignupUser(ctx *fiber.Ctx) error {
 
 	// Menentukan domain
 	domain := "127.0.0.1"
-	if ctx.Hostname() == "manajementugas.com" {
-		domain = "manajementugas.com"
+	if ctx.Hostname() == "master.d3nck08c8eblbc.amplifyapp.com" {
+		domain = "master.d3nck08c8eblbc.amplifyapp.com"
 	}
 
 	ctx.Cookie(&fiber.Cookie{
@@ -70,16 +67,14 @@ func (c *UserController) SignupUser(ctx *fiber.Ctx) error {
 }
 
 func (c *UserController) LoginUser(ctx *fiber.Ctx) error {
-	var user struct {
-		domain.User
-		TurnstileToken string `json:"turnstileToken"`
-	}
+	var user domain.User
 	if err := ctx.BodyParser(&user); err != nil {
 		log.Printf("Error parsing body: %v", err)
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
 	}
+	log.Printf("Received login request for email: %s, password length: %d", user.Email, len(user.Password))
 
-	tokenString, err := c.userService.LoginUser(&user.User, user.TurnstileToken)
+	tokenString, err := c.userService.LoginUser(&user)
 	if err != nil {
 		switch err.Error() {
 		case "User not found":
@@ -96,8 +91,8 @@ func (c *UserController) LoginUser(ctx *fiber.Ctx) error {
 
 	// Menentukan domain
 	domain := "127.0.0.1"
-	if ctx.Hostname() == "manajementugas.com" {
-		domain = "manajementugas.com"
+	if ctx.Hostname() == "master.d3nck08c8eblbc.amplifyapp.com" {
+		domain = "master.d3nck08c8eblbc.amplifyapp.com"
 	}
 
 	ctx.Cookie(&fiber.Cookie{
@@ -166,8 +161,8 @@ func (c *UserController) GoogleCallback(ctx *fiber.Ctx) error {
 	}
 
 	domain := "127.0.0.1"
-	if ctx.Hostname() == "manajementugas.com" {
-		domain = "manajementugas.com"
+	if ctx.Hostname() == "master.d3nck08c8eblbc.amplifyapp.com" {
+		domain = "master.d3nck08c8eblbc.amplifyapp.com"
 	}
 
 	ctx.Cookie(&fiber.Cookie{
@@ -179,7 +174,7 @@ func (c *UserController) GoogleCallback(ctx *fiber.Ctx) error {
 	})
 
 	// Redirect ke frontend dengan email sebagai parameter
-	frontendURL := "http://127.0.0.1:5173" // Ganti dengan URL frontend
+	frontendURL := "https://master.d3nck08c8eblbc.amplifyapp.com"
 
 	encodedEmail := url.QueryEscape(email)
 	encodedToken := url.QueryEscape(t.AccessToken)

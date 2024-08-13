@@ -31,7 +31,7 @@ func main() {
 
 	// Konfigurasi CORS
 	fiberApp.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:3000,http://127.0.0.1:5173,https://manajementugas.com",
+		AllowOrigins:     "https://master.d3nck08c8eblbc.amplifyapp.com,http://127.0.0.1:5173",
 		AllowMethods:     "GET,POST,HEAD,PUT,DELETE,PATCH",
 		AllowHeaders:     "Origin,Content-Type,Accept,Authorization, GoogleAuthorization",
 		ExposeHeaders:    "Content-Length,Set-Cookie,Authorization, GoogleAuthorization",

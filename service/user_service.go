@@ -5,8 +5,8 @@ import (
 )
 
 type UserService interface {
-	SignupUser(user *domain.User, turnstileToken string) (string, error)
-	LoginUser(user *domain.User, turnstileToken string) (string, error)
+	SignupUser(user *domain.User) (string, error)
+	LoginUser(user *domain.User) (string, error)
 	RequireAuthUser(tokenString string) (*domain.User, error)
 	GoogleOauth(email string) error
 	RequireOauth(email string) (*domain.User, error)

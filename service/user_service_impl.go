@@ -35,11 +35,7 @@ func NewUserService(userRepository repository.UserRepository, validator *validat
 	}
 }
 
-func (s *userService) SignupUser(user *domain.User, turnstileToken string) (string, error) {
-	if err := helper.VerifyTurnstileToken(turnstileToken); err != nil {
-		return "", err
-	}
-
+func (s *userService) SignupUser(user *domain.User) (string, error) {
 	if err := s.validator.Struct(user); err != nil {
 		// Jika terjadi kesalahan validasi, konversikan ke satu pesan kesalahan
 		var errMsg string
@@ -82,11 +78,7 @@ func (s *userService) SignupUser(user *domain.User, turnstileToken string) (stri
 	return tokenString, nil
 }
 
-func (s *userService) LoginUser(user *domain.User, turnstileToken string) (string, error) {
-	if err := helper.VerifyTurnstileToken(turnstileToken); err != nil {
-		return "", err
-	}
-
+func (s *userService) LoginUser(user *domain.User) (string, error) {
 	if err := s.validator.Struct(user); err != nil {
 		var errMsg string
 		validationErrors := err.(validator.ValidationErrors)
