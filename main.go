@@ -17,16 +17,13 @@ import (
 var store *session.Store
 
 func main() {
-	// Load environment variables
 	helper.LoadEnv()
 
-	// Connect to the database
 	db, err := app.ConnectDB()
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 
-	// Initialize Fiber
 	fiberApp := fiber.New()
 
 	// Konfigurasi CORS
