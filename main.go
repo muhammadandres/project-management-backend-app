@@ -26,7 +26,6 @@ func main() {
 
 	fiberApp := fiber.New()
 
-	// Konfigurasi CORS
 	fiberApp.Use(cors.New(cors.Config{
 		AllowOrigins:     "https://master.d3nck08c8eblbc.amplifyapp.com,http://127.0.0.1:5173",
 		AllowMethods:     "GET,POST,HEAD,PUT,DELETE,PATCH",
