@@ -54,6 +54,9 @@ func (c *UserController) SignupUser(ctx *fiber.Ctx) error {
 	if ctx.Hostname() == "master.d3nck08c8eblbc.amplifyapp.com" {
 		domain = "master.d3nck08c8eblbc.amplifyapp.com"
 	}
+	if ctx.Hostname() == "manajementugas.com" {
+		domain = "manajementugas.com"
+	}
 
 	ctx.Cookie(&fiber.Cookie{
 		Name:    "Authorization",
@@ -93,6 +96,9 @@ func (c *UserController) LoginUser(ctx *fiber.Ctx) error {
 	domain := "127.0.0.1"
 	if ctx.Hostname() == "master.d3nck08c8eblbc.amplifyapp.com" {
 		domain = "master.d3nck08c8eblbc.amplifyapp.com"
+	}
+	if ctx.Hostname() == "manajementugas.com" {
+		domain = "manajementugas.com"
 	}
 
 	ctx.Cookie(&fiber.Cookie{
@@ -164,6 +170,9 @@ func (c *UserController) GoogleCallback(ctx *fiber.Ctx) error {
 	if ctx.Hostname() == "master.d3nck08c8eblbc.amplifyapp.com" {
 		domain = "master.d3nck08c8eblbc.amplifyapp.com"
 	}
+	if ctx.Hostname() == "manajementugas.com" {
+		domain = "manajementugas.com"
+	}
 
 	ctx.Cookie(&fiber.Cookie{
 		Name:    "GoogleAuthorization",
@@ -175,6 +184,9 @@ func (c *UserController) GoogleCallback(ctx *fiber.Ctx) error {
 
 	// Redirect ke frontend dengan email sebagai parameter
 	frontendURL := "https://master.d3nck08c8eblbc.amplifyapp.com"
+	if ctx.Hostname() == "manajementugas.com" {
+		frontendURL = "https://manajementugas.com"
+	}
 
 	encodedEmail := url.QueryEscape(email)
 	encodedToken := url.QueryEscape(t.AccessToken)
