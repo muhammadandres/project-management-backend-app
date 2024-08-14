@@ -190,7 +190,7 @@ func (c *UserController) GoogleCallback(ctx *fiber.Ctx) error {
 
 	encodedEmail := url.QueryEscape(email)
 	encodedToken := url.QueryEscape(t.AccessToken)
-	redirectURL := fmt.Sprintf("%s/auth-success?email=%s&token=%s", frontendURL, encodedEmail, encodedToken)
+	redirectURL := fmt.Sprintf("%s/?auth_success=true&email=%s&token=%s", frontendURL, encodedEmail, encodedToken)
 	return ctx.Redirect(redirectURL)
 }
 
