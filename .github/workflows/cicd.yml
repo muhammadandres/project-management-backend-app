@@ -17,6 +17,7 @@ jobs:
               run: docker build -t muhammadandres/manajementugasapp .          
             - name: Push image to Docker Hub
               run: docker push muhammadandres/manajementugasapp:latest
+              
     deploy:
         needs: build
         runs-on: self-hosted
