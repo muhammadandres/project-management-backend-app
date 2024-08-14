@@ -129,19 +129,26 @@ func (b *boardRepository) GetAllBoards() ([]*domain.Board, error) {
 	return boards, nil
 }
 
-func (b *boardRepository) DeleteById(id uint64) (*gorm.DB, int64, int64, int64, int64, int64, error) {
+func (b *boardRepository) DeleteById(id uint64) (*gorm.DB, int64, int64, int64, int64, int64, int64, error) {
 	var (
 		countTasks         int64
 		countManagers      int64
 		countEmployees     int64
 		countPlanningFiles int64
 		countProjectFiles  int64
+		countInvitations   int64
 	)
 
 	err := b.db.Transaction(func(tx *gorm.DB) error {
 		// Fetch all task IDs associated with this board
 		var taskIDs []uint
 		if err := tx.Model(&domain.Task{}).Where("board_id = ?", id).Pluck("id", &taskIDs).Error; err != nil {
+			return err
+		}
+
+		// Count and delete associated invitations
+		tx.Model(&domain.Invitation{}).Where("task_id IN (?)", taskIDs).Count(&countInvitations)
+		if err := tx.Where("task_id IN (?)", taskIDs).Delete(&domain.Invitation{}).Error; err != nil {
 			return err
 		}
 
@@ -183,7 +190,7 @@ func (b *boardRepository) DeleteById(id uint64) (*gorm.DB, int64, int64, int64, 
 		return nil
 	})
 
-	return b.db, countTasks, countManagers, countEmployees, countPlanningFiles, countProjectFiles, err
+	return b.db, countTasks, countManagers, countEmployees, countPlanningFiles, countProjectFiles, countInvitations, err
 }
 
 func (b *boardRepository) EditBoard(id uint64, newNameBoard string) (*domain.Board, error) {
