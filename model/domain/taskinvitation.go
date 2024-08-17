@@ -6,7 +6,7 @@ type Invitation struct {
 	Task      Task   `json:"-" gorm:"foreignKey:TaskID;references:ID"`
 	UserID    uint64 `json:"user_id"`
 	User      User   `json:"-" gorm:"foreignKey:UserID;references:ID"`
-	UserEmail string `json:"user_email" gorm:"-"` // Add this field
+	UserEmail string `json:"user_email" gorm:"-"`
 	Role      string `json:"role" gorm:"type:enum('manager','employee')"`
 	Status    string `json:"status" gorm:"type:enum('pending','accepted','rejected')"`
 }

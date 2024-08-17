@@ -8,4 +8,6 @@ type Employee struct {
 	InvitationID     *uint64    `json:"invitation_id,omitempty"`
 	InvitationStatus string     `json:"invitation_status,omitempty"`
 	Invitation       Invitation `json:"-" gorm:"foreignKey:InvitationID;references:ID"`
+	CustomRole       string     `json:"custom_role" gorm:"size:255"`
+	TaskID           uint64     `json:"task_id"`
 }

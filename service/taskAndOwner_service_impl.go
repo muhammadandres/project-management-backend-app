@@ -64,7 +64,7 @@ func (t *taskAndOwnerService) FindAllProjectFiles() ([]*domain.Task, error) {
 	return t.taskAndOwnerRepository.FindAllProjectFiles()
 }
 
-func (t *taskAndOwnerService) UpdateTaskAndOwner(task *domain.Task, manager *domain.Manager, employee *domain.Employee, planningFile *domain.PlanningFile, projectFile *domain.ProjectFile, taskID uint, boardID uint) (*web.UpdateResponse, error) {
+func (t *taskAndOwnerService) UpdateTaskAndOwner(task *domain.Task, newManagers []domain.Manager, newEmployees []domain.Employee, planningFile *domain.PlanningFile, projectFile *domain.ProjectFile, taskID uint, boardID uint) (*web.UpdateResponse, error) {
 	boardDB, err := t.boardRepository.FindById(uint64(boardID))
 	if err != nil {
 		return nil, err
@@ -80,7 +80,7 @@ func (t *taskAndOwnerService) UpdateTaskAndOwner(task *domain.Task, manager *dom
 	task.ID = taskDB.ID
 	task.OwnerID = taskDB.OwnerID
 
-	updateTask, updateManager, updateEmployee, updatePlanningFile, updateProjectFile, managerInvitation, employeeInvitation, err := t.taskAndOwnerRepository.Update(task, manager, employee, planningFile, projectFile)
+	updateTask, updatePlanningFile, updateProjectFile, err := t.taskAndOwnerRepository.Update(task, planningFile, projectFile)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +89,6 @@ func (t *taskAndOwnerService) UpdateTaskAndOwner(task *domain.Task, manager *dom
 	response := &web.UpdateResponse{}
 	var emailsSent []string
 
-	// Populate response dengan data dari updateTask
 	// notif email
 	if task.NameTask != "" {
 		response.NameTask = updateTask.NameTask
@@ -201,7 +200,7 @@ func (t *taskAndOwnerService) UpdateTaskAndOwner(task *domain.Task, manager *dom
 			}
 
 			// Create Google Calendar event
-			senderEmail := "m.andres.novrizal@gmail.com"
+			senderEmail := "manajementugasapp@gmail.com"
 			summary := fmt.Sprintf("Task: %s", nametask)
 			description := TaskDescription
 
@@ -250,7 +249,7 @@ func (t *taskAndOwnerService) UpdateTaskAndOwner(task *domain.Task, manager *dom
 			}
 
 			// Create Google Calendar event
-			senderEmail := "m.andres.novrizal@gmail.com"
+			senderEmail := "manajementugasapp@gmail.com"
 			summary := fmt.Sprintf("Task: %s", nametask)
 			description := TaskDescription
 
@@ -308,24 +307,59 @@ func (t *taskAndOwnerService) UpdateTaskAndOwner(task *domain.Task, manager *dom
 		log.Println(ownerEmail)
 	}
 
-	// Populate managerResponse dengan data dari updateManager jika tidak kosong
-	if updateManager.ID != 0 || updateManager.Email != "" || updateManager.UserID != 0 {
-		response.Manager.ID = updateManager.ID
-		response.Manager.Email = updateManager.Email
-		response.Manager.UserID = updateManager.UserID
-		response.Manager.InvitationStatus = "pending"
-		if managerInvitation != nil {
-			response.Manager.InvitationID = managerInvitation.ID
+	// Add new managers
+	for _, manager := range newManagers {
+		managerResponse, err := t.AddManager(taskID, manager.Email)
+		if err != nil {
+			return nil, err
+		}
+		response.Managers = append(response.Managers, *managerResponse)
+	}
+
+	// Add new employees
+	for _, employee := range newEmployees {
+		employeeResponse, err := t.AddEmployee(taskID, employee.Email)
+		if err != nil {
+			return nil, err
+		}
+		response.Employees = append(response.Employees, *employeeResponse)
+	}
+
+	// Fetch updated managers and employees
+	updatedManagers, err := t.taskAndOwnerRepository.GetManagersByTaskID(taskID)
+	if err != nil {
+		return nil, err
+	}
+
+	updatedEmployees, err := t.taskAndOwnerRepository.GetEmployeesByTaskID(taskID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Prepare response
+	response = &web.UpdateResponse{
+		// ... (other fields)
+		Managers:  make([]web.ManagerResponse, len(updatedManagers)),
+		Employees: make([]web.EmployeeResponse, len(updatedEmployees)),
+	}
+
+	for i, manager := range updatedManagers {
+		response.Managers[i] = web.ManagerResponse{
+			ID:               manager.ID,
+			Email:            manager.Email,
+			CustomRole:       manager.CustomRole,
+			InvitationID:     manager.InvitationID,
+			InvitationStatus: manager.InvitationStatus,
 		}
 	}
 
-	if updateEmployee.ID != 0 || updateEmployee.Email != "" || updateEmployee.UserID != 0 {
-		response.Employee.ID = updateEmployee.ID
-		response.Employee.Email = updateEmployee.Email
-		response.Employee.UserID = updateEmployee.UserID
-		response.Employee.InvitationStatus = "pending"
-		if employeeInvitation != nil {
-			response.Employee.InvitationID = employeeInvitation.ID
+	for i, employee := range updatedEmployees {
+		response.Employees[i] = web.EmployeeResponse{
+			ID:               employee.ID,
+			Email:            employee.Email,
+			CustomRole:       employee.CustomRole,
+			InvitationID:     employee.InvitationID,
+			InvitationStatus: employee.InvitationStatus,
 		}
 	}
 
@@ -394,34 +428,144 @@ func (t *taskAndOwnerService) UpdateTaskAndOwner(task *domain.Task, manager *dom
 	return response, nil
 }
 
-func (t *taskAndOwnerService) RespondToInvitation(invitationID uint64, response string) (*domain.Invitation, error) {
-	invitation, err := t.taskAndOwnerRepository.FindInvitationByID(invitationID)
+func (t *taskAndOwnerService) UpdateOwnerCustomRole(taskID uint, customRole string) (*domain.Owner, error) {
+	owner, err := t.taskAndOwnerRepository.UpdateOwnerCustomRole(taskID, customRole)
+	if err != nil {
+		return nil, err
+	}
+	return owner, nil
+}
+
+func (t *taskAndOwnerService) AddManager(taskID uint, email string) (*web.ManagerResponse, error) {
+	manager, err := t.taskAndOwnerRepository.AddManager(taskID, email)
 	if err != nil {
 		return nil, err
 	}
 
-	if response == "accept" {
-		invitation.Status = "accepted"
-		// Tambahkan user ke task sesuai role
-		if invitation.Role == "manager" {
-			manager := &domain.Manager{UserID: invitation.UserID}
-			_, _, _, _, _, _, _, err = t.taskAndOwnerRepository.Update(&domain.Task{ID: invitation.TaskID}, manager, nil, nil, nil)
-		} else if invitation.Role == "employee" {
-			employee := &domain.Employee{UserID: invitation.UserID}
-			_, _, _, _, _, _, _, err = t.taskAndOwnerRepository.Update(&domain.Task{ID: invitation.TaskID}, nil, employee, nil, nil)
-		}
-	} else if response == "reject" {
-		invitation.Status = "rejected"
-	} else {
+	return &web.ManagerResponse{
+		ID:               manager.ID,
+		Email:            manager.Email,
+		CustomRole:       manager.CustomRole,
+		InvitationID:     manager.InvitationID,
+		InvitationStatus: manager.InvitationStatus,
+	}, nil
+}
+
+func (t *taskAndOwnerService) AddEmployee(taskID uint, email string) (*web.EmployeeResponse, error) {
+	employee, err := t.taskAndOwnerRepository.AddEmployee(taskID, email)
+	if err != nil {
+		return nil, err
+	}
+
+	return &web.EmployeeResponse{
+		ID:               employee.ID,
+		Email:            employee.Email,
+		CustomRole:       employee.CustomRole,
+		InvitationID:     employee.InvitationID,
+		InvitationStatus: employee.InvitationStatus,
+	}, nil
+}
+
+func (t *taskAndOwnerService) UpdateManagerEmail(taskID uint, oldEmail, newEmail string) (*web.ManagerResponse, error) {
+	manager, err := t.taskAndOwnerRepository.UpdateManagerEmail(taskID, oldEmail, newEmail)
+	if err != nil {
+		return nil, err
+	}
+
+	return &web.ManagerResponse{
+		ID:               manager.ID,
+		Email:            manager.Email,
+		CustomRole:       manager.CustomRole,
+		InvitationID:     manager.InvitationID,
+		InvitationStatus: manager.InvitationStatus,
+	}, nil
+}
+
+func (t *taskAndOwnerService) UpdateEmployeeEmail(taskID uint, oldEmail, newEmail string) (*web.EmployeeResponse, error) {
+	employee, err := t.taskAndOwnerRepository.UpdateEmployeeEmail(taskID, oldEmail, newEmail)
+	if err != nil {
+		return nil, err
+	}
+
+	return &web.EmployeeResponse{
+		ID:               employee.ID,
+		Email:            employee.Email,
+		CustomRole:       employee.CustomRole,
+		InvitationID:     employee.InvitationID,
+		InvitationStatus: employee.InvitationStatus,
+	}, nil
+}
+
+func (t *taskAndOwnerService) UpdateManagerCustomRole(taskID uint, email, customRole string) error {
+	return t.taskAndOwnerRepository.UpdateManagerCustomRole(taskID, email, customRole)
+}
+
+func (t *taskAndOwnerService) UpdateEmployeeCustomRole(taskID uint, email, customRole string) error {
+	return t.taskAndOwnerRepository.UpdateEmployeeCustomRole(taskID, email, customRole)
+}
+
+func (t *taskAndOwnerService) RespondToInvitation(invitationID uint64, response string, role string) (*domain.Invitation, error) {
+	if response != "accept" && response != "reject" {
 		return nil, errors.New("Invalid response")
 	}
 
-	err = t.taskAndOwnerRepository.UpdateInvitation(invitation)
+	if role != "manager" && role != "employee" {
+		return nil, errors.New("Invalid role")
+	}
+
+	var err error
+	var updatedInvitation *domain.Invitation
+	if role == "manager" {
+		updatedInvitation, err = t.taskAndOwnerRepository.UpdateManagerInvitationStatus(invitationID, response)
+	} else {
+		updatedInvitation, err = t.taskAndOwnerRepository.UpdateEmployeeInvitationStatus(invitationID, response)
+	}
+
 	if err != nil {
 		return nil, err
 	}
 
-	return invitation, nil
+	return updatedInvitation, nil
+}
+
+func (t *taskAndOwnerService) GetManagersByTaskID(taskID uint) ([]web.ManagerResponse, error) {
+	managers, err := t.taskAndOwnerRepository.GetManagersByTaskID(taskID)
+	if err != nil {
+		return nil, err
+	}
+
+	var managerResponses []web.ManagerResponse
+	for _, manager := range managers {
+		managerResponses = append(managerResponses, web.ManagerResponse{
+			ID:               manager.ID,
+			Email:            manager.Email,
+			CustomRole:       manager.CustomRole,
+			InvitationID:     manager.InvitationID,
+			InvitationStatus: manager.InvitationStatus,
+		})
+	}
+
+	return managerResponses, nil
+}
+
+func (t *taskAndOwnerService) GetEmployeesByTaskID(taskID uint) ([]web.EmployeeResponse, error) {
+	employees, err := t.taskAndOwnerRepository.GetEmployeesByTaskID(taskID)
+	if err != nil {
+		return nil, err
+	}
+
+	var employeeResponses []web.EmployeeResponse
+	for _, employee := range employees {
+		employeeResponses = append(employeeResponses, web.EmployeeResponse{
+			ID:               employee.ID,
+			Email:            employee.Email,
+			CustomRole:       employee.CustomRole,
+			InvitationID:     employee.InvitationID,
+			InvitationStatus: employee.InvitationStatus,
+		})
+	}
+
+	return employeeResponses, nil
 }
 
 func (t *taskAndOwnerService) GetAllInvitations() ([]domain.Invitation, error) {

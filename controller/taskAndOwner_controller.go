@@ -6,6 +6,7 @@ import (
 	"manajemen_tugas_master/model/web"
 	"manajemen_tugas_master/service"
 	"strconv"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -283,8 +284,8 @@ func (t *TaskAndOwnerController) UpdateTaskAndOwner(ctx *fiber.Ctx) error {
 		task         domain.Task
 		planningFile domain.PlanningFile
 		projectFile  domain.ProjectFile
-		manager      domain.Manager
-		employee     domain.Employee
+		newManagers  []domain.Manager
+		newEmployees []domain.Employee
 	)
 
 	// Get user from context (either JWT or OAuth)
@@ -314,20 +315,97 @@ func (t *TaskAndOwnerController) UpdateTaskAndOwner(ctx *fiber.Ctx) error {
 
 	task.ID = uint64(taskIdUint64)
 
-	// manager
-	if managerEmail := ctx.FormValue("manager"); managerEmail != "" {
+	var response web.UpdateResponse
+
+	if ownerCustomRole := ctx.FormValue("owner_custom_role"); ownerCustomRole != "" {
 		if err := t.taskAndOwnerService.UpdateValidationOwner(uint(taskIdUint64), uint(userID)); err != nil {
 			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 		}
-		manager.Email = managerEmail
-	}
-
-	// employee
-	if employeeEmail := ctx.FormValue("employee"); employeeEmail != "" {
-		if err := t.taskAndOwnerService.UpdateValidationManager(uint(taskIdUint64), uint(userID)); err != nil {
+		updatedOwner, err := t.taskAndOwnerService.UpdateOwnerCustomRole(uint(taskIdUint64), ownerCustomRole)
+		if err != nil {
 			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 		}
-		employee.Email = employeeEmail
+		response.Owner = &web.OwnerResponse{
+			ID:         updatedOwner.ID,
+			Email:      updatedOwner.Email,
+			UserID:     updatedOwner.UserID,
+			CustomRole: updatedOwner.CustomRole,
+		}
+	}
+
+	var updatedManagers []web.ManagerResponse
+	var updatedEmployees []web.EmployeeResponse
+
+	// Add new managers
+	if managerEmails := ctx.FormValue("manager"); managerEmails != "" {
+		emails := strings.Split(managerEmails, ",")
+		for _, email := range emails {
+			newManagers = append(newManagers, domain.Manager{Email: strings.TrimSpace(email)})
+		}
+	}
+
+	// Add new employees
+	if employeeEmails := ctx.FormValue("employee"); employeeEmails != "" {
+		emails := strings.Split(employeeEmails, ",")
+		for _, email := range emails {
+			newEmployees = append(newEmployees, domain.Employee{Email: strings.TrimSpace(email)})
+		}
+	}
+
+	// Update manager email
+	if managerEmail := ctx.FormValue("old_manager_email"); managerEmail != "" {
+		newEmail := ctx.FormValue("new_manager_email")
+		if newEmail == "" {
+			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "New manager email is required"})
+		}
+		manager, err := t.taskAndOwnerService.UpdateManagerEmail(uint(taskIdUint64), managerEmail, newEmail)
+		if err != nil {
+			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		}
+		updatedManagers = append(updatedManagers, *manager)
+	}
+
+	// Update employee email
+	if employeeEmail := ctx.FormValue("old_employee_email"); employeeEmail != "" {
+		newEmail := ctx.FormValue("new_employee_email")
+		if newEmail == "" {
+			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "New employee email is required"})
+		}
+		employee, err := t.taskAndOwnerService.UpdateEmployeeEmail(uint(taskIdUint64), employeeEmail, newEmail)
+		if err != nil {
+			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		}
+		updatedEmployees = append(updatedEmployees, *employee)
+	}
+
+	// Update manager custom role
+	if managerCustomRole := ctx.FormValue("manager_custom_role"); managerCustomRole != "" {
+		managerEmail := ctx.FormValue("manager_email")
+		if managerEmail == "" {
+			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Manager email is required for custom role update"})
+		}
+		if err := t.taskAndOwnerService.UpdateManagerCustomRole(uint(taskIdUint64), managerEmail, managerCustomRole); err != nil {
+			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		}
+		updatedManagers = append(updatedManagers, web.ManagerResponse{
+			Email:      managerEmail,
+			CustomRole: managerCustomRole,
+		})
+	}
+
+	// Update employee custom role
+	if employeeCustomRole := ctx.FormValue("employee_custom_role"); employeeCustomRole != "" {
+		employeeEmail := ctx.FormValue("employee_email")
+		if employeeEmail == "" {
+			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Employee email is required for custom role update"})
+		}
+		if err := t.taskAndOwnerService.UpdateEmployeeCustomRole(uint(taskIdUint64), employeeEmail, employeeCustomRole); err != nil {
+			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		}
+		updatedEmployees = append(updatedEmployees, web.EmployeeResponse{
+			Email:      employeeEmail,
+			CustomRole: employeeCustomRole,
+		})
 	}
 
 	// planning file
@@ -413,16 +491,21 @@ func (t *TaskAndOwnerController) UpdateTaskAndOwner(ctx *fiber.Ctx) error {
 		task.ProjectComment = projectComment
 	}
 
-	// save
-	response, err := t.taskAndOwnerService.UpdateTaskAndOwner(&task, &manager, &employee, &planningFile, &projectFile, uint(taskIdUint64), uint(boardIdUint64))
+	// Update the final response with any other changes made
+	finalResponse, err := t.taskAndOwnerService.UpdateTaskAndOwner(&task, newManagers, newEmployees, &planningFile, &projectFile, uint(taskIdUint64), uint(boardIdUint64))
 	if err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	// Merge the owner update into the final response if it was updated
+	if response.Owner != nil {
+		finalResponse.Owner = response.Owner
 	}
 
 	return ctx.Status(fiber.StatusOK).JSON(web.WebResponse{
 		Code:    200,
 		Message: "Success",
-		Data:    response,
+		Data:    finalResponse,
 	})
 }
 
@@ -432,16 +515,17 @@ func (t *TaskAndOwnerController) RespondToInvitation(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid invitation ID"})
 	}
 	response := ctx.Query("response") // "accept" or "reject"
+	role := ctx.Query("role")         // "manager" or "employee"
 
-	invitation, err := t.taskAndOwnerService.RespondToInvitation(invitationID, response)
+	updatedInvitation, err := t.taskAndOwnerService.RespondToInvitation(invitationID, response, role)
 	if err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	return ctx.Status(fiber.StatusOK).JSON(web.WebResponse{
 		Code:    200,
-		Message: "Success",
-		Data:    invitation,
+		Message: "Invitation response processed successfully",
+		Data:    updatedInvitation,
 	})
 }
 

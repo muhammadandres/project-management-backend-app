@@ -14,7 +14,7 @@ type TaskAndOwnerService interface {
 	FindAllEmployees() ([]*domain.Task, error)
 	FindAllPlanningFiles() ([]*domain.Task, error)
 	FindAllProjectFiles() ([]*domain.Task, error)
-	UpdateTaskAndOwner(task *domain.Task, manager *domain.Manager, employee *domain.Employee, planningFile *domain.PlanningFile, projectFile *domain.ProjectFile, taskID uint, boardID uint) (*web.UpdateResponse, error)
+	UpdateTaskAndOwner(task *domain.Task, newManagers []domain.Manager, newEmployees []domain.Employee, planningFile *domain.PlanningFile, projectFile *domain.ProjectFile, taskID uint, boardID uint) (*web.UpdateResponse, error)
 	UpdateValidationOwner(taskID uint, userID uint) error
 	UpdateValidationManager(taskID uint, userID uint) error
 	UpdateValidationEmployee(taskID uint, userID uint) error
@@ -24,6 +24,17 @@ type TaskAndOwnerService interface {
 	DeleteProjectFile(fileId uint) (string, error)
 	DeleteTaskAndOwner(taskID uint) error
 
-	RespondToInvitation(invitationID uint64, response string) (*domain.Invitation, error)
+	UpdateOwnerCustomRole(taskID uint, customRole string) (*domain.Owner, error)
+	AddManager(taskID uint, email string) (*web.ManagerResponse, error)
+	AddEmployee(taskID uint, email string) (*web.EmployeeResponse, error)
+	UpdateManagerEmail(taskID uint, oldEmail, newEmail string) (*web.ManagerResponse, error)
+	UpdateEmployeeEmail(taskID uint, oldEmail, newEmail string) (*web.EmployeeResponse, error)
+	UpdateManagerCustomRole(taskID uint, email, customRole string) error
+	UpdateEmployeeCustomRole(taskID uint, email, customRole string) error
+
+	GetManagersByTaskID(taskID uint) ([]web.ManagerResponse, error)
+	GetEmployeesByTaskID(taskID uint) ([]web.EmployeeResponse, error)
+
 	GetAllInvitations() ([]domain.Invitation, error)
+	RespondToInvitation(invitationID uint64, response string, role string) (*domain.Invitation, error)
 }
