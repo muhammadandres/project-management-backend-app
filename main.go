@@ -43,5 +43,6 @@ func main() {
 
 	app.SetupRoutes(fiberApp, db, store)
 
+	// run code
 	log.Fatal(fiberApp.Listen(":" + os.Getenv("PORT")))
 }
