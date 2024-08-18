@@ -113,7 +113,13 @@ func (c *UserController) LoginUser(ctx *fiber.Ctx) error {
 }
 
 func (c *UserController) GoogleOauth(ctx *fiber.Ctx) error {
-	config := helper.SetupGoogleAuth()
+	config, err := helper.SetupGoogleAuth()
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to setup Google Auth: " + err.Error(),
+		})
+	}
+
 	url := config.AuthCodeURL("state", oauth2.AccessTypeOffline)
 
 	fmt.Println("Authorization URL:", url)
@@ -127,7 +133,13 @@ func (c *UserController) GoogleOauth(ctx *fiber.Ctx) error {
 func (c *UserController) GoogleCallback(ctx *fiber.Ctx) error {
 	code := ctx.Query("code")
 
-	config := helper.SetupGoogleAuth()
+	config, err := helper.SetupGoogleAuth()
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to setup Google Auth: " + err.Error(),
+		})
+	}
+
 	t, err := config.Exchange(context.Background(), code)
 	if err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})

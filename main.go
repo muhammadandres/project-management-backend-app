@@ -27,7 +27,7 @@ func main() {
 	fiberApp := fiber.New()
 
 	fiberApp.Use(cors.New(cors.Config{
-		AllowOrigins:     "https://master.d3nck08c8eblbc.amplifyapp.com,http://127.0.0.1:5173",
+		AllowOrigins:     "https://master.d3nck08c8eblbc.amplifyapp.com,http://127.0.0.1:5173,https://manajementugas.com,https://www.manajementugas.com",
 		AllowMethods:     "GET,POST,HEAD,PUT,DELETE,PATCH",
 		AllowHeaders:     "Origin,Content-Type,Accept,Authorization, GoogleAuthorization",
 		ExposeHeaders:    "Content-Length,Set-Cookie,Authorization, GoogleAuthorization",

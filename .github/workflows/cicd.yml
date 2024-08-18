@@ -51,14 +51,11 @@ jobs:
                 DB_USER: ${{ secrets.DB_USER }}
                 DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
                 DB_NAME: ${{ secrets.DB_NAME }}
+                OAUTH_CREDENTIALS: ${{ secrets.OAUTH_CREDENTIALS }}
                 GOOGLE_CALENDAR_CREDENTIALS: ${{ secrets.GOOGLE_CALENDAR_CREDENTIALS }}
-                CLIENT_ID: ${{ secrets.CLIENT_ID }}
-                CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
-                REDIRECT_URL: ${{ secrets.REDIRECT_URL }}
               run: |
                 docker run -d -p 4040:4040 --name manajemen-tugas-container \
                   -e PORT -e DB_URL -e SECRET -e AWS_REGION -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY \
                   -e DB_HOST -e DB_USER -e DB_PASSWORD -e DB_NAME \
-                  -e GOOGLE_CALENDAR_CREDENTIALS \
-                  -e CLIENT_ID -e CLIENT_SECRET -e REDIRECT_URL \
+                  -e OAUTH_CREDENTIALS -e GOOGLE_CALENDAR_CREDENTIALS \
                   muhammadandres/manajementugasapp:latest
