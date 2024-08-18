@@ -195,10 +195,12 @@ func (c *UserController) GoogleCallback(ctx *fiber.Ctx) error {
 	})
 
 	// Redirect ke frontend dengan email sebagai parameter
-	frontendURL := "https://master.d3nck08c8eblbc.amplifyapp.com"
-	if ctx.Hostname() == "manajementugas.com" {
-		frontendURL = "https://manajementugas.com"
-	}
+	frontendURL := "https://www.manajementugas.com"
+
+	// frontendURL := "https://master.d3nck08c8eblbc.amplifyapp.com"
+	// if ctx.Hostname() == "manajementugas.com" {
+	// 	frontendURL = "https://manajementugas.com"
+	// }
 
 	encodedEmail := url.QueryEscape(email)
 	encodedToken := url.QueryEscape(t.AccessToken)
