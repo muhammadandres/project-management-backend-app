@@ -33,38 +33,15 @@ func SetupGoogleAuth() (*oauth2.Config, error) {
 		}
 	}
 
-	// Ekstrak informasi yang diperlukan dari credentialsJSON
-	webConfig, ok := credentialsJSON["web"].(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("invalid OAUTH_CREDENTIALS format: 'web' key not found or not an object")
+	// Konversi kembali ke JSON bytes untuk google.ConfigFromJSON
+	credentialsBytes, err := json.Marshal(credentialsJSON)
+	if err != nil {
+		return nil, fmt.Errorf("unable to marshal credentials: %v", err)
 	}
 
-	clientID, ok := webConfig["client_id"].(string)
-	if !ok {
-		return nil, fmt.Errorf("client_id not found or not a string")
-	}
-
-	clientSecret, ok := webConfig["client_secret"].(string)
-	if !ok {
-		return nil, fmt.Errorf("client_secret not found or not a string")
-	}
-
-	redirectURIs, ok := webConfig["redirect_uris"].([]interface{})
-	if !ok || len(redirectURIs) == 0 {
-		return nil, fmt.Errorf("redirect_uris not found or empty")
-	}
-
-	redirectURL, ok := redirectURIs[0].(string)
-	if !ok {
-		return nil, fmt.Errorf("first redirect_uri is not a string")
-	}
-
-	config := &oauth2.Config{
-		ClientID:     clientID,
-		ClientSecret: clientSecret,
-		RedirectURL:  redirectURL,
-		Scopes:       []string{"email", "profile"},
-		Endpoint:     google.Endpoint,
+	config, err := google.ConfigFromJSON(credentialsBytes, "email", "profile")
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse client secret file to config: %v", err)
 	}
 
 	return config, nil
