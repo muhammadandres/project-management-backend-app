@@ -11,7 +11,6 @@ import (
 	"manajemen_tugas_master/service"
 	"net/url"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -114,12 +113,7 @@ func (c *UserController) LoginUser(ctx *fiber.Ctx) error {
 }
 
 func (c *UserController) GoogleOauth(ctx *fiber.Ctx) error {
-	config, err := helper.SetupGoogleAuth()
-	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to setup Google Auth: " + err.Error(),
-		})
-	}
+	config := helper.SetupGoogleAuth()
 
 	url := config.AuthCodeURL("state", oauth2.AccessTypeOffline)
 
@@ -134,13 +128,7 @@ func (c *UserController) GoogleOauth(ctx *fiber.Ctx) error {
 func (c *UserController) GoogleCallback(ctx *fiber.Ctx) error {
 	code := ctx.Query("code")
 
-	config, err := helper.SetupGoogleAuth()
-	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to setup Google Auth: " + err.Error(),
-		})
-	}
-
+	config := helper.SetupGoogleAuth()
 	t, err := config.Exchange(context.Background(), code)
 	if err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
@@ -196,14 +184,20 @@ func (c *UserController) GoogleCallback(ctx *fiber.Ctx) error {
 	})
 
 	// Redirect ke frontend dengan email sebagai parameter
-	frontendURL := "https://www.manajementugas.com"
-	if strings.HasPrefix(ctx.Get("Referer"), "https://manajementugas.com") {
-		frontendURL = "https://manajementugas.com"
-	}
+	//frontendURL := "http://127.0.0.1:5173"
+	frontendURL := "https://manajementugas.com"
+
+	// if strings.HasPrefix(ctx.Get("Referer"), "https://manajementugas.com") {
+	// 	frontendURL = "https://manajementugas.com"
+	// }
+	// if strings.HasPrefix(ctx.Get("Referer"), "http://127.0.0.1:5173") {
+	// 	frontendURL = "http://127.0.0.1:5173"
+	// }
 
 	encodedEmail := url.QueryEscape(email)
 	encodedToken := url.QueryEscape(t.AccessToken)
-	redirectURL := fmt.Sprintf("%s/auth-success?email=%s&token=%s&redirect=/task-management", frontendURL, encodedEmail, encodedToken)
+	redirectURL := fmt.Sprintf("%s/auth-success?email=%s&token=%s", frontendURL, encodedEmail, encodedToken)
+	log.Printf("Redirecting to: %s", redirectURL)
 	return ctx.Redirect(redirectURL)
 }
 

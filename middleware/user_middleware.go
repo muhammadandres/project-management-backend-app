@@ -11,10 +11,10 @@ import (
 func AuthUser(userService service.UserService, store *session.Store) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		// Get the cookies from request
-		tokenStringJwt := ctx.Cookies("Authorization")
-		tokenStringOauth := ctx.Cookies("GoogleAuthorization")
-		// tokenStringJwt := ctx.Get("Authorization")
-		// tokenStringOauth := ctx.Get("GoogleAuthorization")
+		// tokenStringJwt := ctx.Cookies("Authorization")
+		// tokenStringOauth := ctx.Cookies("GoogleAuthorization")
+		tokenStringJwt := ctx.Get("Authorization")
+		tokenStringOauth := ctx.Get("GoogleAuthorization")
 
 		fmt.Println("Authorization Token:", tokenStringJwt)
 		fmt.Println("GoogleAuthorization Token:", tokenStringOauth)
