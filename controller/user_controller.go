@@ -11,6 +11,7 @@ import (
 	"manajemen_tugas_master/service"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -196,15 +197,14 @@ func (c *UserController) GoogleCallback(ctx *fiber.Ctx) error {
 
 	// Redirect ke frontend dengan email sebagai parameter
 	frontendURL := "https://www.manajementugas.com"
-
-	// frontendURL := "https://master.d3nck08c8eblbc.amplifyapp.com"
-	// if ctx.Hostname() == "manajementugas.com" {
-	// 	frontendURL = "https://manajementugas.com"
-	// }
+	if strings.HasPrefix(ctx.Get("Referer"), "https://manajementugas.com") {
+		frontendURL = "https://manajementugas.com"
+	}
 
 	encodedEmail := url.QueryEscape(email)
 	encodedToken := url.QueryEscape(t.AccessToken)
 	redirectURL := fmt.Sprintf("%s/auth-success?email=%s&token=%s", frontendURL, encodedEmail, encodedToken)
+	log.Printf("Redirecting to: %s", redirectURL)
 	return ctx.Redirect(redirectURL)
 }
 
