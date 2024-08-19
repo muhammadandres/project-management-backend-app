@@ -2,10 +2,13 @@ package service
 
 import (
 	"errors"
+	"fmt"
+	"log"
 	"manajemen_tugas_master/helper"
 	"manajemen_tugas_master/model/domain"
 	"manajemen_tugas_master/model/web"
 	"manajemen_tugas_master/repository"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 )
@@ -90,27 +93,26 @@ func (t *taskAndOwnerService) UpdateTaskAndOwner(task *domain.Task, manager *dom
 	// notif email
 	if task.NameTask != "" {
 		response.NameTask = updateTask.NameTask
-		// ownerEmail, managerEmails, employeeEmails, nametask, _, err := t.taskAndOwnerRepository.GetNameEmailsDescription(uint64(taskID))
-		// if err != nil {
-		// 	return nil, err
-		// }
+		ownerEmail, managerEmails, employeeEmails, nametask, _, err := t.taskAndOwnerRepository.GetNameEmailsDescription(uint64(taskID))
+		if err != nil {
+			return nil, err
+		}
 
-		// to := []string{ownerEmail}
-		// to = append(to, managerEmails...)
-		// to = append(to, employeeEmails...)
+		to := []string{ownerEmail}
+		to = append(to, managerEmails...)
+		to = append(to, employeeEmails...)
 
-		// subject := "Task Name Updated"
-		// body := helper.GetEmailTemplate("Name task Update", nametask, "Name Updated", fmt.Sprintf("The name of the task has been updated to '%s'.", updateTask.NameTask))
+		subject := "Task Name Updated"
+		body := helper.GetEmailTemplate("Name task Update", nametask, "Name Updated", fmt.Sprintf("The name of the task has been updated to '%s'.", updateTask.NameTask))
 
-		// err = helper.SendEmail(to, subject, body)
-		// if err != nil {
-		// 	log.Printf("Failed to send email: %v", err)
-		// } else {
-		// 	emailsSent = append(emailsSent, "Name task Update, Email sent successfully")
-		// }
+		err = helper.SendEmail(to, subject, body)
+		if err != nil {
+			log.Printf("Failed to send email: %v", err)
+		} else {
+			emailsSent = append(emailsSent, "Name task Update, Email sent successfully")
+		}
 
-		// log.Println(ownerEmail, managerEmails, employeeEmails)
-		emailsSent = append(emailsSent, "Name task Update, Email sent successfully")
+		log.Println(ownerEmail, managerEmails, employeeEmails)
 	}
 
 	response.PlanningDescription = updateTask.PlanningDescription
@@ -118,170 +120,166 @@ func (t *taskAndOwnerService) UpdateTaskAndOwner(task *domain.Task, manager *dom
 	// notif email
 	if updateTask.PlanningStatus == "Approved" || updateTask.PlanningStatus == "Not Approved" {
 		response.PlanningStatus = updateTask.PlanningStatus
-		// ownerEmail, managerEmails, employeeEmails, nametask, _, err := t.taskAndOwnerRepository.GetNameEmailsDescription(uint64(taskID))
-		// if err != nil {
-		// 	return nil, err
-		// }
+		ownerEmail, managerEmails, employeeEmails, nametask, _, err := t.taskAndOwnerRepository.GetNameEmailsDescription(uint64(taskID))
+		if err != nil {
+			return nil, err
+		}
 
-		// to := []string{ownerEmail}
-		// to = append(to, managerEmails...)
-		// to = append(to, employeeEmails...)
+		to := []string{ownerEmail}
+		to = append(to, managerEmails...)
+		to = append(to, employeeEmails...)
 
-		// var subject, body string
-		// if updateTask.PlanningStatus == "Approved" {
-		// 	subject = "Task Planning Approved"
-		// 	body = helper.GetEmailTemplate("Planning Status Update", nametask, "Approved", "The planning for this task has been approved.")
-		// } else {
-		// 	subject = "Task Planning Not Approved"
-		// 	body = helper.GetEmailTemplate("Planning Status Update", nametask, "Not Approved", "The planning for this task has not been approved. Please review and make necessary adjustments.")
-		// }
+		var subject, body string
+		if updateTask.PlanningStatus == "Approved" {
+			subject = "Task Planning Approved"
+			body = helper.GetEmailTemplate("Planning Status Update", nametask, "Approved", "The planning for this task has been approved.")
+		} else {
+			subject = "Task Planning Not Approved"
+			body = helper.GetEmailTemplate("Planning Status Update", nametask, "Not Approved", "The planning for this task has not been approved. Please review and make necessary adjustments.")
+		}
 
-		// err = helper.SendEmail(to, subject, body)
-		// if err != nil {
-		// 	log.Printf("Failed to send email: %v", err)
-		// 	return nil, fmt.Errorf("failed to send email: %v", err)
-		// } else {
-		// 	emailsSent = append(emailsSent, "Task Planning status Update Email sent successfully")
-		// }
+		err = helper.SendEmail(to, subject, body)
+		if err != nil {
+			log.Printf("Failed to send email: %v", err)
+			return nil, fmt.Errorf("failed to send email: %v", err)
+		} else {
+			emailsSent = append(emailsSent, "Task Planning status Update Email sent successfully")
+		}
 
-		// log.Println(ownerEmail, managerEmails, employeeEmails)
-		emailsSent = append(emailsSent, "Task Planning status Update Email sent successfully")
+		log.Println(ownerEmail, managerEmails, employeeEmails)
 	}
 
 	// notif email
 	if updateTask.ProjectStatus == "Done" || updateTask.ProjectStatus == "Undone" || updateTask.ProjectStatus == "Working" {
 		response.ProjectStatus = updateTask.ProjectStatus
-		// ownerEmail, managerEmails, employeeEmails, nametask, _, err := t.taskAndOwnerRepository.GetNameEmailsDescription(uint64(taskID))
-		// if err != nil {
-		// 	return nil, err
-		// }
+		ownerEmail, managerEmails, employeeEmails, nametask, _, err := t.taskAndOwnerRepository.GetNameEmailsDescription(uint64(taskID))
+		if err != nil {
+			return nil, err
+		}
 
-		// to := []string{ownerEmail}
-		// to = append(to, managerEmails...)
-		// to = append(to, employeeEmails...)
+		to := []string{ownerEmail}
+		to = append(to, managerEmails...)
+		to = append(to, employeeEmails...)
 
-		// var subject, body string
-		// switch updateTask.ProjectStatus {
-		// case "Done":
-		// 	subject = "Task Project Done"
-		// 	body = helper.GetEmailTemplate("Project Status Update", nametask, "Done", "The project for this task has been completed.")
-		// case "Undone":
-		// 	subject = "Task Project Undone"
-		// 	body = helper.GetEmailTemplate("Project Status Update", nametask, "Undone", "The project for this task has not been completed. Please review and make necessary adjustments.")
-		// case "Working":
-		// 	subject = "Task Project in Progress"
-		// 	body = helper.GetEmailTemplate("Project Status Update", nametask, "Working", "Work has started on the project for this task.")
-		// }
+		var subject, body string
+		switch updateTask.ProjectStatus {
+		case "Done":
+			subject = "Task Project Done"
+			body = helper.GetEmailTemplate("Project Status Update", nametask, "Done", "The project for this task has been completed.")
+		case "Undone":
+			subject = "Task Project Undone"
+			body = helper.GetEmailTemplate("Project Status Update", nametask, "Undone", "The project for this task has not been completed. Please review and make necessary adjustments.")
+		case "Working":
+			subject = "Task Project in Progress"
+			body = helper.GetEmailTemplate("Project Status Update", nametask, "Working", "Work has started on the project for this task.")
+		}
 
-		// err = helper.SendEmail(to, subject, body)
-		// if err != nil {
-		// 	log.Printf("Failed to send email: %v", err)
-		// 	return nil, fmt.Errorf("failed to send email: %v", err)
-		// } else {
-		// 	emailsSent = append(emailsSent, "Task Project status update, Email sent successfully")
-		// }
+		err = helper.SendEmail(to, subject, body)
+		if err != nil {
+			log.Printf("Failed to send email: %v", err)
+			return nil, fmt.Errorf("failed to send email: %v", err)
+		} else {
+			emailsSent = append(emailsSent, "Task Project status update, Email sent successfully")
+		}
 
-		// log.Println(ownerEmail, managerEmails, employeeEmails)
-		emailsSent = append(emailsSent, "Task Project status update, Email sent successfully")
+		log.Println(ownerEmail, managerEmails, employeeEmails)
 	}
 
 	if updateTask.PlanningDueDate != "" {
 		response.PlanningDueDate = updateTask.PlanningDueDate
 
-		// _, managerEmails, _, TaskDescription, nametask, err := t.taskAndOwnerRepository.GetNameEmailsDescription(uint64(taskID))
-		// if err != nil {
-		// 	return nil, err
-		// }
+		_, managerEmails, _, TaskDescription, nametask, err := t.taskAndOwnerRepository.GetNameEmailsDescription(uint64(taskID))
+		if err != nil {
+			return nil, err
+		}
 
-		// if len(managerEmails) > 0 {
-		// 	//Parse date from string to time.Time
-		// 	parsedDueDate, err := time.Parse("02-01-2006", updateTask.PlanningDueDate)
-		// 	if err != nil {
-		// 		return nil, fmt.Errorf("Failed to parse planning due date: %v", err)
-		// 	}
+		if len(managerEmails) > 0 {
+			//Parse date from string to time.Time
+			parsedDueDate, err := time.Parse("02-01-2006", updateTask.PlanningDueDate)
+			if err != nil {
+				return nil, fmt.Errorf("Failed to parse planning due date: %v", err)
+			}
 
-		// 	// Create Google Calendar event
-		// 	senderEmail := "m.andres.novrizal@gmail.com"
-		// 	summary := fmt.Sprintf("Task: %s", nametask)
-		// 	description := TaskDescription
+			// Create Google Calendar event
+			senderEmail := "m.andres.novrizal@gmail.com"
+			summary := fmt.Sprintf("Task: %s", nametask)
+			description := TaskDescription
 
-		// 	// Use current time for startDateTime
-		// 	startDateTime := time.Now().Format(time.RFC3339)
+			// Use current time for startDateTime
+			startDateTime := time.Now().Format(time.RFC3339)
 
-		// 	// Format endDateTime as expected by Google Calendar API
-		// 	endDateTime := parsedDueDate.Format(time.RFC3339)
+			// Format endDateTime as expected by Google Calendar API
+			endDateTime := parsedDueDate.Format(time.RFC3339)
 
-		// 	timeZone := "Asia/Jakarta" // Adjust to desired timezone
-		// 	attendees := managerEmails
+			timeZone := "Asia/Jakarta" // Adjust to desired timezone
+			attendees := managerEmails
 
-		// 	event, err := helper.CreateGoogleCalendarEvent(senderEmail, summary, description, startDateTime, endDateTime, timeZone, attendees)
-		// 	if err != nil {
-		// 		log.Printf("Failed to create Google Calendar event: %v", err)
-		// 	} else {
-		// 		log.Printf("Google Calendar event created: %s", event.HtmlLink)
-		// 	}
+			event, err := helper.CreateGoogleCalendarEvent(senderEmail, summary, description, startDateTime, endDateTime, timeZone, attendees)
+			if err != nil {
+				log.Printf("Failed to create Google Calendar event: %v", err)
+			} else {
+				log.Printf("Google Calendar event created: %s", event.HtmlLink)
+			}
 
-		// 	// Send email invitation
-		// 	emailSubject := fmt.Sprintf("Calendar Invite: %s", summary)
-		// 	emailBody := helper.GetCalendarInviteTemplate(summary, description)
-		// 	err = helper.SendEmail(attendees, emailSubject, emailBody)
-		// 	if err != nil {
-		// 		log.Printf("Failed to send email: %v", err)
-		// 	} else {
-		// 		emailsSent = append(emailsSent, "Task Planning due date Update, Email sent successfully")
-		// 	}
-		// }
-		emailsSent = append(emailsSent, "Task Planning due date Update, Email sent successfully")
+			// Send email invitation
+			emailSubject := fmt.Sprintf("Calendar Invite: %s", summary)
+			emailBody := helper.GetCalendarInviteTemplate(summary, description)
+			err = helper.SendEmail(attendees, emailSubject, emailBody)
+			if err != nil {
+				log.Printf("Failed to send email: %v", err)
+			} else {
+				emailsSent = append(emailsSent, "Task Planning due date Update, Email sent successfully")
+			}
+		}
 	}
 
 	// calendar schedule
 	if updateTask.ProjectDueDate != "" {
 		response.ProjectDueDate = updateTask.ProjectDueDate
 
-		// _, _, employeeEmails, TaskDescription, nametask, err := t.taskAndOwnerRepository.GetNameEmailsDescription(uint64(taskID))
-		// if err != nil {
-		// 	return nil, err
-		// }
+		_, _, employeeEmails, TaskDescription, nametask, err := t.taskAndOwnerRepository.GetNameEmailsDescription(uint64(taskID))
+		if err != nil {
+			return nil, err
+		}
 
-		// if len(employeeEmails) > 0 {
-		// 	//Parse date from string to time.Time
-		// 	parsedDueDate, err := time.Parse("02-01-2006", updateTask.ProjectDueDate)
-		// 	if err != nil {
-		// 		return nil, fmt.Errorf("Failed to parse project due date: %v", err)
-		// 	}
+		if len(employeeEmails) > 0 {
+			//Parse date from string to time.Time
+			parsedDueDate, err := time.Parse("02-01-2006", updateTask.ProjectDueDate)
+			if err != nil {
+				return nil, fmt.Errorf("Failed to parse project due date: %v", err)
+			}
 
-		// 	// Create Google Calendar event
-		// 	senderEmail := "m.andres.novrizal@gmail.com"
-		// 	summary := fmt.Sprintf("Task: %s", nametask)
-		// 	description := TaskDescription
+			// Create Google Calendar event
+			senderEmail := "m.andres.novrizal@gmail.com"
+			summary := fmt.Sprintf("Task: %s", nametask)
+			description := TaskDescription
 
-		// 	// Use current time for startDateTime
-		// 	startDateTime := time.Now().Format(time.RFC3339)
+			// Use current time for startDateTime
+			startDateTime := time.Now().Format(time.RFC3339)
 
-		// 	// Format endDateTime as expected by Google Calendar API
-		// 	endDateTime := parsedDueDate.Format(time.RFC3339)
+			// Format endDateTime as expected by Google Calendar API
+			endDateTime := parsedDueDate.Format(time.RFC3339)
 
-		// 	timeZone := "Asia/Jakarta" // Adjust to desired timezone
-		// 	attendees := employeeEmails
+			timeZone := "Asia/Jakarta" // Adjust to desired timezone
+			attendees := employeeEmails
 
-		// 	event, err := helper.CreateGoogleCalendarEvent(senderEmail, summary, description, startDateTime, endDateTime, timeZone, attendees)
-		// 	if err != nil {
-		// 		log.Printf("Failed to create Google Calendar event: %v", err)
-		// 	} else {
-		// 		log.Printf("Google Calendar event created: %s", event.HtmlLink)
-		// 	}
+			event, err := helper.CreateGoogleCalendarEvent(senderEmail, summary, description, startDateTime, endDateTime, timeZone, attendees)
+			if err != nil {
+				log.Printf("Failed to create Google Calendar event: %v", err)
+			} else {
+				log.Printf("Google Calendar event created: %s", event.HtmlLink)
+			}
 
-		// 	// Send email invitation
-		// 	emailSubject := fmt.Sprintf("Calendar Invite: %s", summary)
-		// 	emailBody := helper.GetCalendarInviteTemplate(summary, description)
-		// 	err = helper.SendEmail(attendees, emailSubject, emailBody)
-		// 	if err != nil {
-		// 		log.Printf("Failed to send email: %v", err)
-		// 	} else {
-		// 		emailsSent = append(emailsSent, "Task Project due date Update, Email sent successfully")
-		// 	}
-		// }
-		emailsSent = append(emailsSent, "Task Project due date Update, Email sent successfully")
+			// Send email invitation
+			emailSubject := fmt.Sprintf("Calendar Invite: %s", summary)
+			emailBody := helper.GetCalendarInviteTemplate(summary, description)
+			err = helper.SendEmail(attendees, emailSubject, emailBody)
+			if err != nil {
+				log.Printf("Failed to send email: %v", err)
+			} else {
+				emailsSent = append(emailsSent, "Task Project due date Update, Email sent successfully")
+			}
+		}
 	}
 
 	response.Priority = updateTask.Priority
@@ -289,26 +287,25 @@ func (t *taskAndOwnerService) UpdateTaskAndOwner(task *domain.Task, manager *dom
 	// notif email
 	if updateTask.ProjectComment != "" {
 		response.ProjectComment = updateTask.ProjectComment
-		// ownerEmail, _, _, nametask, _, err := t.taskAndOwnerRepository.GetNameEmailsDescription(uint64(taskID))
-		// if err != nil {
-		// 	return nil, err
-		// }
+		ownerEmail, _, _, nametask, _, err := t.taskAndOwnerRepository.GetNameEmailsDescription(uint64(taskID))
+		if err != nil {
+			return nil, err
+		}
 
-		// to := []string{ownerEmail}
+		to := []string{ownerEmail}
 
-		// subject := "New Project Comment Added"
-		// body := helper.GetEmailTemplate("Project Comment Update", nametask, "New Comment", fmt.Sprintf("A new comment has been added to the project:\n\n'%s'", updateTask.ProjectComment))
+		subject := "New Project Comment Added"
+		body := helper.GetEmailTemplate("Project Comment Update", nametask, "New Comment", fmt.Sprintf("A new comment has been added to the project:\n\n'%s'", updateTask.ProjectComment))
 
-		// err = helper.SendEmail(to, subject, body)
-		// if err != nil {
-		// 	log.Printf("Failed to send email: %v", err)
-		// 	return nil, fmt.Errorf("failed to send email: %v", err)
-		// } else {
-		// 	emailsSent = append(emailsSent, "Task Project comment Update Email sent successfully")
-		// }
+		err = helper.SendEmail(to, subject, body)
+		if err != nil {
+			log.Printf("Failed to send email: %v", err)
+			return nil, fmt.Errorf("failed to send email: %v", err)
+		} else {
+			emailsSent = append(emailsSent, "Task Project comment Update Email sent successfully")
+		}
 
-		// log.Println(ownerEmail)
-		emailsSent = append(emailsSent, "Task Project comment Update Email sent successfully")
+		log.Println(ownerEmail)
 	}
 
 	// Populate managerResponse dengan data dari updateManager jika tidak kosong
@@ -339,28 +336,27 @@ func (t *taskAndOwnerService) UpdateTaskAndOwner(task *domain.Task, manager *dom
 		response.PlanningFile.FileName = updatePlanningFile.FileName
 
 		// notif email
-		// ownerEmail, managerEmails, employeeEmails, nametask, _, err := t.taskAndOwnerRepository.GetNameEmailsDescription(uint64(taskID))
-		// if err != nil {
-		// 	return nil, err
-		// }
+		ownerEmail, managerEmails, employeeEmails, nametask, _, err := t.taskAndOwnerRepository.GetNameEmailsDescription(uint64(taskID))
+		if err != nil {
+			return nil, err
+		}
 
-		// to := []string{ownerEmail}
-		// to = append(to, managerEmails...)
-		// to = append(to, employeeEmails...)
+		to := []string{ownerEmail}
+		to = append(to, managerEmails...)
+		to = append(to, employeeEmails...)
 
-		// subject := "Planning File Updated"
-		// body := helper.GetEmailTemplate("Planning File Update", nametask, "File Updated", fmt.Sprintf("A planning file has been updated:\nFile Name: %s\nFile URL: %s", updatePlanningFile.FileName, updatePlanningFile.FileUrl))
+		subject := "Planning File Updated"
+		body := helper.GetEmailTemplate("Planning File Update", nametask, "File Updated", fmt.Sprintf("A planning file has been updated:\nFile Name: %s\nFile URL: %s", updatePlanningFile.FileName, updatePlanningFile.FileUrl))
 
-		// err = helper.SendEmail(to, subject, body)
-		// if err != nil {
-		// 	log.Printf("Failed to send email: %v", err)
-		// 	return nil, fmt.Errorf("failed to send email: %v", err)
-		// } else {
-		// 	emailsSent = append(emailsSent, "Task Planning file Update Email sent successfully")
-		// }
+		err = helper.SendEmail(to, subject, body)
+		if err != nil {
+			log.Printf("Failed to send email: %v", err)
+			return nil, fmt.Errorf("failed to send email: %v", err)
+		} else {
+			emailsSent = append(emailsSent, "Task Planning file Update Email sent successfully")
+		}
 
-		// log.Println(ownerEmail, managerEmails, employeeEmails)
-		emailsSent = append(emailsSent, "Task Planning file Update Email sent successfully")
+		log.Println(ownerEmail, managerEmails, employeeEmails)
 	}
 
 	// Populate projectFileResponse dengan data dari updateProjectFile jika tidak kosong
@@ -370,28 +366,27 @@ func (t *taskAndOwnerService) UpdateTaskAndOwner(task *domain.Task, manager *dom
 		response.ProjectFile.FileName = updateProjectFile.FileName
 
 		// notif email
-		// ownerEmail, managerEmails, employeeEmails, nametask, _, err := t.taskAndOwnerRepository.GetNameEmailsDescription(uint64(taskID))
-		// if err != nil {
-		// 	return nil, err
-		// }
+		ownerEmail, managerEmails, employeeEmails, nametask, _, err := t.taskAndOwnerRepository.GetNameEmailsDescription(uint64(taskID))
+		if err != nil {
+			return nil, err
+		}
 
-		// to := []string{ownerEmail}
-		// to = append(to, managerEmails...)
-		// to = append(to, employeeEmails...)
+		to := []string{ownerEmail}
+		to = append(to, managerEmails...)
+		to = append(to, employeeEmails...)
 
-		// subject := "Project File Updated"
-		// body := helper.GetEmailTemplate("Project File Update", nametask, "File Updated", fmt.Sprintf("A project file has been updated:\nFile Name: %s\nFile URL: %s", updateProjectFile.FileName, updateProjectFile.FileUrl))
+		subject := "Project File Updated"
+		body := helper.GetEmailTemplate("Project File Update", nametask, "File Updated", fmt.Sprintf("A project file has been updated:\nFile Name: %s\nFile URL: %s", updateProjectFile.FileName, updateProjectFile.FileUrl))
 
-		// err = helper.SendEmail(to, subject, body)
-		// if err != nil {
-		// 	log.Printf("Failed to send email: %v", err)
-		// 	return nil, fmt.Errorf("failed to send email: %v", err)
-		// } else {
-		// 	emailsSent = append(emailsSent, "Task Project file Update Email sent successfully")
-		// }
+		err = helper.SendEmail(to, subject, body)
+		if err != nil {
+			log.Printf("Failed to send email: %v", err)
+			return nil, fmt.Errorf("failed to send email: %v", err)
+		} else {
+			emailsSent = append(emailsSent, "Task Project file Update Email sent successfully")
+		}
 
-		// log.Println(ownerEmail, managerEmails, employeeEmails)
-		emailsSent = append(emailsSent, "Task Project file Update Email sent successfully")
+		log.Println(ownerEmail, managerEmails, employeeEmails)
 	}
 
 	response.EmailsSent = emailsSent
