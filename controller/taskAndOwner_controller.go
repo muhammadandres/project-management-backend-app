@@ -514,7 +514,7 @@ func (t *TaskAndOwnerController) RespondToInvitation(ctx *fiber.Ctx) error {
 	if err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid invitation ID"})
 	}
-	response := ctx.Query("response") // "accept" or "reject"
+	response := ctx.Query("response") // "accepted" or "rejected"
 	role := ctx.Query("role")         // "manager" or "employee"
 
 	updatedInvitation, err := t.taskAndOwnerService.RespondToInvitation(invitationID, response, role)

@@ -602,7 +602,7 @@ func (t *taskAndOwnerRepository) UpdateManagerInvitationStatus(invitationID uint
 		return nil, err
 	}
 
-	// Fetch user email
+	// Fetch user emailn
 	var user domain.User
 	if err := t.db.First(&user, invitation.UserID).Error; err != nil {
 		return nil, err

@@ -505,7 +505,7 @@ func (t *taskAndOwnerService) UpdateEmployeeCustomRole(taskID uint, email, custo
 }
 
 func (t *taskAndOwnerService) RespondToInvitation(invitationID uint64, response string, role string) (*domain.Invitation, error) {
-	if response != "accept" && response != "reject" {
+	if response != "accepted" && response != "rejected" {
 		return nil, errors.New("Invalid response")
 	}
 
