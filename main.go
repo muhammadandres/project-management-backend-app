@@ -35,7 +35,6 @@ func main() {
 		MaxAge:           int((12 * time.Hour).Seconds()),
 	}))
 
-	// Middleware
 	fiberApp.Use(logger.New())
 	fiberApp.Use(recover.New())
 
