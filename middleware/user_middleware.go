@@ -12,9 +12,9 @@ func AuthUser(userService service.UserService, store *session.Store) fiber.Handl
 	return func(ctx *fiber.Ctx) error {
 		// Get the cookies from request
 		// tokenStringJwt := ctx.Cookies("Authorization")
-		// tokenStringOauth := ctx.Cookies("GoogleAuthorization")
 		tokenStringJwt := ctx.Get("Authorization")
 		tokenStringOauth := ctx.Get("GoogleAuthorization")
+		// tokenStringOauth := ctx.Cookies("GoogleAuthorization")
 
 		fmt.Println("Authorization Token:", tokenStringJwt)
 		fmt.Println("GoogleAuthorization Token:", tokenStringOauth)

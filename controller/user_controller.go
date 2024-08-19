@@ -51,9 +51,6 @@ func (c *UserController) SignupUser(ctx *fiber.Ctx) error {
 
 	// Menentukan domain
 	domain := "127.0.0.1"
-	if ctx.Hostname() == "master.d3nck08c8eblbc.amplifyapp.com" {
-		domain = "master.d3nck08c8eblbc.amplifyapp.com"
-	}
 	if ctx.Hostname() == "manajementugas.com" {
 		domain = "manajementugas.com"
 	}
@@ -94,9 +91,6 @@ func (c *UserController) LoginUser(ctx *fiber.Ctx) error {
 
 	// Menentukan domain
 	domain := "127.0.0.1"
-	if ctx.Hostname() == "master.d3nck08c8eblbc.amplifyapp.com" {
-		domain = "master.d3nck08c8eblbc.amplifyapp.com"
-	}
 	if ctx.Hostname() == "manajementugas.com" {
 		domain = "manajementugas.com"
 	}
@@ -114,7 +108,6 @@ func (c *UserController) LoginUser(ctx *fiber.Ctx) error {
 
 func (c *UserController) GoogleOauth(ctx *fiber.Ctx) error {
 	config := helper.SetupGoogleAuth()
-
 	url := config.AuthCodeURL("state", oauth2.AccessTypeOffline)
 
 	fmt.Println("Authorization URL:", url)
@@ -168,9 +161,6 @@ func (c *UserController) GoogleCallback(ctx *fiber.Ctx) error {
 	}
 
 	domain := "127.0.0.1"
-	if ctx.Hostname() == "master.d3nck08c8eblbc.amplifyapp.com" {
-		domain = "master.d3nck08c8eblbc.amplifyapp.com"
-	}
 	if ctx.Hostname() == "manajementugas.com" {
 		domain = "manajementugas.com"
 	}
@@ -184,20 +174,11 @@ func (c *UserController) GoogleCallback(ctx *fiber.Ctx) error {
 	})
 
 	// Redirect ke frontend dengan email sebagai parameter
-	//frontendURL := "http://127.0.0.1:5173"
-	frontendURL := "https://manajementugas.com"
-
-	// if strings.HasPrefix(ctx.Get("Referer"), "https://manajementugas.com") {
-	// 	frontendURL = "https://manajementugas.com"
-	// }
-	// if strings.HasPrefix(ctx.Get("Referer"), "http://127.0.0.1:5173") {
-	// 	frontendURL = "http://127.0.0.1:5173"
-	// }
+	frontendURL := "http://127.0.0.1:5173" // Ganti dengan URL frontend
 
 	encodedEmail := url.QueryEscape(email)
 	encodedToken := url.QueryEscape(t.AccessToken)
 	redirectURL := fmt.Sprintf("%s/auth-success?email=%s&token=%s", frontendURL, encodedEmail, encodedToken)
-	log.Printf("Redirecting to: %s", redirectURL)
 	return ctx.Redirect(redirectURL)
 }
 

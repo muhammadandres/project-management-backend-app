@@ -45,20 +45,12 @@ func (s *boardService) GetAllBoards() ([]*domain.Board, error) {
 }
 
 func (s *boardService) DeleteBoardById(id uint64) error {
-	db, countTasks, countManagers, countEmployees, countPlanningFiles, countProjectFiles, countInvitations, err := s.boardRepository.DeleteById(id)
+	db, countTasks, countManagers, countEmployees, countPlanningFiles, countProjectFiles, err := s.boardRepository.DeleteById(id)
 	if err != nil {
 		return err
 	}
 
 	// Reset auto increment
-	if countInvitations > 0 {
-		var invitation domain.Invitation
-		err = helper.ResetAutoIncrement(db, &invitation, "id", "invitations")
-		if err != nil {
-			return err
-		}
-	}
-
 	if countTasks > 0 {
 		var task domain.Task
 		err = helper.ResetAutoIncrement(db, &task, "id", "tasks")
@@ -69,7 +61,7 @@ func (s *boardService) DeleteBoardById(id uint64) error {
 
 	if countManagers > 0 {
 		var manager domain.Manager
-		err = helper.ResetAutoIncrement(db, &manager, "id", "task_managers")
+		err = helper.ResetAutoIncrement(db, &manager, "id", "managers")
 		if err != nil {
 			return err
 		}
@@ -77,7 +69,7 @@ func (s *boardService) DeleteBoardById(id uint64) error {
 
 	if countEmployees > 0 {
 		var employee domain.Employee
-		err = helper.ResetAutoIncrement(db, &employee, "id", "task_employees")
+		err = helper.ResetAutoIncrement(db, &employee, "id", "employees")
 		if err != nil {
 			return err
 		}
@@ -85,7 +77,7 @@ func (s *boardService) DeleteBoardById(id uint64) error {
 
 	if countPlanningFiles > 0 {
 		var planningFile domain.PlanningFile
-		err = helper.ResetAutoIncrement(db, &planningFile, "id", "task_planning_files")
+		err = helper.ResetAutoIncrement(db, &planningFile, "id", "planning_files")
 		if err != nil {
 			return err
 		}
@@ -93,7 +85,7 @@ func (s *boardService) DeleteBoardById(id uint64) error {
 
 	if countProjectFiles > 0 {
 		var projectFile domain.ProjectFile
-		err = helper.ResetAutoIncrement(db, &projectFile, "id", "task_project_files")
+		err = helper.ResetAutoIncrement(db, &projectFile, "id", "project_files")
 		if err != nil {
 			return err
 		}

@@ -61,7 +61,7 @@ func (s *userService) SignupUser(user *domain.User) (string, error) {
 	// ambil id user berdasarkan email
 	dbUser, err := s.userRepository.Login(user)
 	if err != nil {
-		return "", errors.New("User not found")
+		return "", errors.New("User not found") // Mengembalikan pesan kesalahan jika login gagal
 	}
 
 	// generate token jwt

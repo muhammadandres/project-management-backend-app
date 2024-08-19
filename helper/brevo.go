@@ -12,7 +12,7 @@ func SendEmail(to []string, subject, htmlBody string) error {
 	smtpHost := "smtp-relay.brevo.com"
 	smtpPort := "587"
 
-	from := "manajementugasapp@gmail.com"
+	from := "m.andres.novrizal@gmail.com"
 
 	message := []byte(fmt.Sprintf("To: %s\r\n"+
 		"From: %s\r\n"+

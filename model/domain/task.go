@@ -1,5 +1,9 @@
 package domain
 
+import (
+	"time"
+)
+
 type Task struct {
 	ID                  uint64         `json:"id" gorm:"primaryKey"`
 	BoardID             uint64         `json:"board_id"`
@@ -18,4 +22,7 @@ type Task struct {
 	ProjectDueDate      string         `json:"project_due_date" gorm:"size:255"`
 	Priority            string         `json:"priority" gorm:"type:enum('High','Medium','Low');default:'Medium'"`
 	ProjectComment      string         `json:"project_comment"`
+	CreatedAt           time.Time      `json:"-"`
+	UpdatedAt           time.Time      `json:"-"`
+	DeletedAt           *time.Time      `json:"-"`
 }
