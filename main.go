@@ -38,6 +38,7 @@ func main() {
 	fiberApp.Use(logger.New())
 	fiberApp.Use(recover.New())
 
+	// session
 	store = session.New()
 
 	app.SetupRoutes(fiberApp, db, store)
