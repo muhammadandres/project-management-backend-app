@@ -64,7 +64,7 @@ func (t *taskAndOwnerService) FindAllProjectFiles() ([]*domain.Task, error) {
 	return t.taskAndOwnerRepository.FindAllProjectFiles()
 }
 
-func (t *taskAndOwnerService) UpdateTaskAndOwner(task *domain.Task, manager *domain.Manager, employee *domain.Employee, planningFile *domain.PlanningFile, projectFile *domain.ProjectFile, taskID uint, boardID uint) (*web.UpdateResponse, error) {
+func (t *taskAndOwnerService) UpdateTaskAndOwner(task *domain.Task, manager *domain.Manager, employee *domain.Employee, PlanningDescriptionFile *domain.PlanningDescriptionFile, planningFile *domain.PlanningFile, projectFile *domain.ProjectFile, taskID uint, boardID uint) (*web.UpdateResponse, error) {
 	boardDB, err := t.boardRepository.FindById(uint64(boardID))
 	if err != nil {
 		return nil, err
@@ -80,7 +80,7 @@ func (t *taskAndOwnerService) UpdateTaskAndOwner(task *domain.Task, manager *dom
 	task.ID = taskDB.ID
 	task.OwnerID = taskDB.OwnerID
 
-	updateTask, updateManager, updateEmployee, updatePlanningFile, updateProjectFile, managerInvitation, employeeInvitation, err := t.taskAndOwnerRepository.Update(task, manager, employee, planningFile, projectFile)
+	updateTask, updateManager, updateEmployee, updatePlanningDescriptionFile, updatePlanningFile, updateProjectFile, managerInvitation, employeeInvitation, err := t.taskAndOwnerRepository.Update(task, manager, employee, PlanningDescriptionFile, planningFile, projectFile)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +115,55 @@ func (t *taskAndOwnerService) UpdateTaskAndOwner(task *domain.Task, manager *dom
 		log.Println(ownerEmail, managerEmails, employeeEmails)
 	}
 
-	response.PlanningDescription = updateTask.PlanningDescription
+	if task.PlanningDescriptionPersen != "" {
+		response.PlanningDescriptionPersen = updateTask.PlanningDescriptionPersen
+
+		// Send email notification for planning description Persen update
+		ownerEmail, managerEmails, employeeEmails, nametask, _, err := t.taskAndOwnerRepository.GetNameEmailsDescription(uint64(taskID))
+		if err != nil {
+			return nil, err
+		}
+
+		to := []string{ownerEmail}
+		to = append(to, managerEmails...)
+		to = append(to, employeeEmails...)
+
+		subject := "Planning Description Persen Updated"
+		body := helper.GetEmailTemplate("Planning Description Persen Update", nametask, "Persen Updated", fmt.Sprintf("The planning description Persen has been updated to: '%s'", updateTask.PlanningDescriptionPersen))
+
+		err = helper.SendEmail(to, subject, body)
+		if err != nil {
+			log.Printf("Failed to send email: %v", err)
+		} else {
+			emailsSent = append(emailsSent, "Planning Description Persen Update Email sent successfully")
+		}
+	}
+
+	if updatePlanningDescriptionFile.ID != 0 || updatePlanningDescriptionFile.FileUrl != "" || updatePlanningDescriptionFile.FileName != "" {
+		response.PlanningDescriptionFile.ID = updatePlanningDescriptionFile.ID
+		response.PlanningDescriptionFile.FileUrl = updatePlanningDescriptionFile.FileUrl
+		response.PlanningDescriptionFile.FileName = updatePlanningDescriptionFile.FileName
+
+		// Send email notification for planning description file update
+		ownerEmail, managerEmails, employeeEmails, nametask, _, err := t.taskAndOwnerRepository.GetNameEmailsDescription(uint64(taskID))
+		if err != nil {
+			return nil, err
+		}
+
+		to := []string{ownerEmail}
+		to = append(to, managerEmails...)
+		to = append(to, employeeEmails...)
+
+		subject := "Planning Description File Updated"
+		body := helper.GetEmailTemplate("Planning Description File Update", nametask, "File Updated", fmt.Sprintf("A planning description file has been updated:\nFile Name: %s\nFile URL: %s", updatePlanningDescriptionFile.FileName, updatePlanningDescriptionFile.FileUrl))
+
+		err = helper.SendEmail(to, subject, body)
+		if err != nil {
+			log.Printf("Failed to send email: %v", err)
+		} else {
+			emailsSent = append(emailsSent, "Planning Description File Update Email sent successfully")
+		}
+	}
 
 	// notif email
 	if updateTask.PlanningStatus == "Approved" || updateTask.PlanningStatus == "Not Approved" {
@@ -405,10 +453,10 @@ func (t *taskAndOwnerService) RespondToInvitation(invitationID uint64, response 
 		// Tambahkan user ke task sesuai role
 		if invitation.Role == "manager" {
 			manager := &domain.Manager{UserID: invitation.UserID}
-			_, _, _, _, _, _, _, err = t.taskAndOwnerRepository.Update(&domain.Task{ID: invitation.TaskID}, manager, nil, nil, nil)
+			_, _, _, _, _, _, _, _, err = t.taskAndOwnerRepository.Update(&domain.Task{ID: invitation.TaskID}, manager, nil, nil, nil, nil)
 		} else if invitation.Role == "employee" {
 			employee := &domain.Employee{UserID: invitation.UserID}
-			_, _, _, _, _, _, _, err = t.taskAndOwnerRepository.Update(&domain.Task{ID: invitation.TaskID}, nil, employee, nil, nil)
+			_, _, _, _, _, _, _, _, err = t.taskAndOwnerRepository.Update(&domain.Task{ID: invitation.TaskID}, nil, employee, nil, nil, nil)
 		}
 	} else if response == "reject" {
 		invitation.Status = "rejected"
@@ -517,6 +565,21 @@ func (t *taskAndOwnerService) DeleteEmployee(taskId uint, employeeId uint) error
 	return nil
 }
 
+func (t *taskAndOwnerService) DeletePlanningDescriptionFile(fileId uint) (string, error) {
+	db, fileName, err := t.taskAndOwnerRepository.DeletePlanningDescriptionFile(fileId)
+	if err != nil {
+		return "", err
+	}
+
+	var planningDescriptionFile domain.PlanningDescriptionFile
+	err = helper.ResetAutoIncrement(db, &planningDescriptionFile, "id", "planning_description_files")
+	if err != nil {
+		return "", err
+	}
+
+	return fileName, nil
+}
+
 func (t *taskAndOwnerService) DeletePlanningFile(fileId uint) (string, error) {
 	db, fileName, err := t.taskAndOwnerRepository.DeletePlanningFile(fileId)
 	if err != nil {
@@ -548,7 +611,7 @@ func (t *taskAndOwnerService) DeleteProjectFile(fileId uint) (string, error) {
 }
 
 func (t *taskAndOwnerService) DeleteTaskAndOwner(taskID uint) error {
-	db, countOwners, countManager, countEmployee, countPlanningFile, countProjectFile, err := t.taskAndOwnerRepository.Delete(taskID)
+	db, countOwners, countManager, countEmployee, countPlanningFile, countProjectFile, countPlanningDescriptionFile, err := t.taskAndOwnerRepository.Delete(taskID)
 	if err != nil {
 		return err
 	}
@@ -595,6 +658,14 @@ func (t *taskAndOwnerService) DeleteTaskAndOwner(taskID uint) error {
 	if countProjectFile > 0 {
 		var projectFile domain.ProjectFile
 		err = helper.ResetAutoIncrement(db, &projectFile, "id", "project_files")
+		if err != nil {
+			return err
+		}
+	}
+
+	if countPlanningDescriptionFile > 0 {
+		var planningDescriptionFile domain.PlanningDescriptionFile
+		err = helper.ResetAutoIncrement(db, &planningDescriptionFile, "id", "planning_description_files")
 		if err != nil {
 			return err
 		}

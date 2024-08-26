@@ -37,6 +37,7 @@ func (b *boardRepository) FindById(id uint64) (*domain.Board, error) {
 		Preload("Tasks.Employee").
 		Preload("Tasks.PlanningFile").
 		Preload("Tasks.ProjectFile").
+		Preload("Tasks.PlanningDescriptionFile").
 		First(&board, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("board not found")
@@ -94,6 +95,7 @@ func (b *boardRepository) GetAllBoards() ([]*domain.Board, error) {
 		Preload("Tasks.Employee").
 		Preload("Tasks.PlanningFile").
 		Preload("Tasks.ProjectFile").
+		Preload("Tasks.PlanningDescriptionFile"). // Add this line
 		Find(&boards).Error; err != nil {
 		return nil, err
 	}

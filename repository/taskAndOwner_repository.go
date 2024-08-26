@@ -16,15 +16,16 @@ type TaskAndOwnerRepository interface {
 	FindAllPlanningFiles() ([]*domain.Task, error)
 	FindAllProjectFiles() ([]*domain.Task, error)
 	GetNameEmailsDescription(taskID uint64) (ownerEmail string, managerEmails []string, employeeEmails []string, nametask string, description string, err error)
-	Update(task *domain.Task, manager *domain.Manager, employee *domain.Employee, planningFile *domain.PlanningFile, projectFile *domain.ProjectFile) (*domain.Task, *domain.Manager, *domain.Employee, *domain.PlanningFile, *domain.ProjectFile, *domain.Invitation, *domain.Invitation, error)
+	Update(task *domain.Task, manager *domain.Manager, employee *domain.Employee, PlanningDescriptionFile *domain.PlanningDescriptionFile, planningFile *domain.PlanningFile, projectFile *domain.ProjectFile) (*domain.Task, *domain.Manager, *domain.Employee, *domain.PlanningDescriptionFile, *domain.PlanningFile, *domain.ProjectFile, *domain.Invitation, *domain.Invitation, error)
 	UpdateValidationOwner(taskID uint, userID uint) error
 	UpdateValidationManager(taskID uint, userID uint) error
 	UpdateValidationEmployee(taskID uint, userID uint) error
 	DeleteManager(taskId uint, managerId uint) (*gorm.DB, int64, int64, int64, error)
 	DeleteEmployee(taskId uint, employeeId uint) (*gorm.DB, int64, error)
+	DeletePlanningDescriptionFile(fileId uint) (*gorm.DB, string, error)
 	DeletePlanningFile(fileId uint) (*gorm.DB, string, error)
 	DeleteProjectFile(fileId uint) (*gorm.DB, string, error)
-	Delete(taskID uint) (*gorm.DB, int64, int64, int64, int64, int64, error)
+	Delete(taskID uint) (*gorm.DB, int64, int64, int64, int64, int64, int64, error)
 
 	CreateInvitation(invitation *domain.Invitation) (*domain.Invitation, error)
 	FindInvitationByID(id uint64) (*domain.Invitation, error)

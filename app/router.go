@@ -77,6 +77,7 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, store *session.Store) {
 	taskRoutes.Get("tasks/project_files", taskController.GetAllProjectFiles)
 	taskRoutes.Delete("task/:id/manager/:manager_id", taskController.DeleteManager)
 	taskRoutes.Delete("task/:id/employee/:employee_id", taskController.DeleteEmployee)
+	taskRoutes.Delete("task/:id/planning_description_file/:file_id", taskController.DeletePlanningDescriptionFile)
 	taskRoutes.Delete("task/:id/planning_file/:file_id", taskController.DeletePlanningFile)
 	taskRoutes.Delete("task/:id/project_file/:file_id", taskController.DeleteProjectFile)
 	taskRoutes.Delete("task/:id", taskController.DeleteTaskAndOwner)

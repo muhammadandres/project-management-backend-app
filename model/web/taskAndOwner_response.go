@@ -5,15 +5,20 @@ import (
 )
 
 type UpdateResponse struct {
-	NameTask            string `json:"name_task,omitempty"`
-	PlanningDescription string `json:"planning_description,omitempty"`
-	PlanningStatus      string `json:"planning_status,omitempty"`
-	ProjectStatus       string `json:"project_status,omitempty"`
-	PlanningDueDate     string `json:"planning_due_date,omitempty"`
-	ProjectDueDate      string `json:"project_due_date,omitempty"`
-	Priority            string `json:"priority,omitempty"`
-	ProjectComment      string `json:"project_comment,omitempty"`
-	Manager             struct {
+	NameTask                  string `json:"name_task,omitempty"`
+	PlanningDescriptionPersen string `json:"planning_description_persen,omitempty"`
+	PlanningDescriptionFile   struct {
+		ID       uint64 `json:"id,omitempty"`
+		FileUrl  string `json:"file_url,omitempty"`
+		FileName string `json:"file_name,omitempty"`
+	} `json:"planning_description_file,omitempty"`
+	PlanningStatus  string `json:"planning_status,omitempty"`
+	ProjectStatus   string `json:"project_status,omitempty"`
+	PlanningDueDate string `json:"planning_due_date,omitempty"`
+	ProjectDueDate  string `json:"project_due_date,omitempty"`
+	Priority        string `json:"priority,omitempty"`
+	ProjectComment  string `json:"project_comment,omitempty"`
+	Manager         struct {
 		ID               uint64 `json:"id,omitempty"`
 		Email            string `json:"email,omitempty"`
 		UserID           uint64 `json:"user_id,omitempty"`

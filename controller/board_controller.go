@@ -74,21 +74,22 @@ func (c *BoardController) GetBoardById(ctx *fiber.Ctx) error {
 		ID        uint64 `json:"id"`
 		NameBoard string `json:"name_board"`
 		Tasks     []struct {
-			ID                  uint64                          `json:"id"`
-			BoardID             uint64                          `json:"board_id"`
-			Owner               domain.Owner                    `json:"owner"`
-			Manager             []domain.ManagerWithInvitation  `json:"manager"`
-			Employee            []domain.EmployeeWithInvitation `json:"employee"`
-			NameTask            string                          `json:"name_task"`
-			PlanningDescription string                          `json:"planning_description"`
-			PlanningFile        []domain.PlanningFile           `json:"planning_file"`
-			PlanningStatus      string                          `json:"planning_status"`
-			ProjectFile         []domain.ProjectFile            `json:"project_file"`
-			ProjectStatus       string                          `json:"project_status"`
-			PlanningDueDate     string                          `json:"planning_due_date"`
-			ProjectDueDate      string                          `json:"project_due_date"`
-			Priority            string                          `json:"priority"`
-			ProjectComment      string                          `json:"project_comment"`
+			ID                        uint64                           `json:"id"`
+			BoardID                   uint64                           `json:"board_id"`
+			Owner                     domain.Owner                     `json:"owner"`
+			Manager                   []domain.ManagerWithInvitation   `json:"manager"`
+			Employee                  []domain.EmployeeWithInvitation  `json:"employee"`
+			NameTask                  string                           `json:"name_task"`
+			PlanningDescriptionPersen string                           `json:"planning_description_persen"`
+			PlanningDescriptionFile   []domain.PlanningDescriptionFile `json:"planning_description_files"`
+			PlanningFile              []domain.PlanningFile            `json:"planning_file"`
+			PlanningStatus            string                           `json:"planning_status"`
+			ProjectFile               []domain.ProjectFile             `json:"project_file"`
+			ProjectStatus             string                           `json:"project_status"`
+			PlanningDueDate           string                           `json:"planning_due_date"`
+			ProjectDueDate            string                           `json:"project_due_date"`
+			Priority                  string                           `json:"priority"`
+			ProjectComment            string                           `json:"project_comment"`
 		} `json:"tasks"`
 	}{
 		ID:        board.ID,
@@ -97,35 +98,37 @@ func (c *BoardController) GetBoardById(ctx *fiber.Ctx) error {
 
 	for _, task := range board.Tasks {
 		taskResponse := struct {
-			ID                  uint64                          `json:"id"`
-			BoardID             uint64                          `json:"board_id"`
-			Owner               domain.Owner                    `json:"owner"`
-			Manager             []domain.ManagerWithInvitation  `json:"manager"`
-			Employee            []domain.EmployeeWithInvitation `json:"employee"`
-			NameTask            string                          `json:"name_task"`
-			PlanningDescription string                          `json:"planning_description"`
-			PlanningFile        []domain.PlanningFile           `json:"planning_file"`
-			PlanningStatus      string                          `json:"planning_status"`
-			ProjectFile         []domain.ProjectFile            `json:"project_file"`
-			ProjectStatus       string                          `json:"project_status"`
-			PlanningDueDate     string                          `json:"planning_due_date"`
-			ProjectDueDate      string                          `json:"project_due_date"`
-			Priority            string                          `json:"priority"`
-			ProjectComment      string                          `json:"project_comment"`
+			ID                        uint64                           `json:"id"`
+			BoardID                   uint64                           `json:"board_id"`
+			Owner                     domain.Owner                     `json:"owner"`
+			Manager                   []domain.ManagerWithInvitation   `json:"manager"`
+			Employee                  []domain.EmployeeWithInvitation  `json:"employee"`
+			NameTask                  string                           `json:"name_task"`
+			PlanningDescriptionPersen string                           `json:"planning_description_persen"`
+			PlanningDescriptionFile   []domain.PlanningDescriptionFile `json:"planning_description_files"`
+			PlanningFile              []domain.PlanningFile            `json:"planning_file"`
+			PlanningStatus            string                           `json:"planning_status"`
+			ProjectFile               []domain.ProjectFile             `json:"project_file"`
+			ProjectStatus             string                           `json:"project_status"`
+			PlanningDueDate           string                           `json:"planning_due_date"`
+			ProjectDueDate            string                           `json:"project_due_date"`
+			Priority                  string                           `json:"priority"`
+			ProjectComment            string                           `json:"project_comment"`
 		}{
-			ID:                  task.ID,
-			BoardID:             task.BoardID,
-			Owner:               task.Owner,
-			NameTask:            task.NameTask,
-			PlanningDescription: task.PlanningDescription,
-			PlanningFile:        task.PlanningFile,
-			PlanningStatus:      task.PlanningStatus,
-			ProjectFile:         task.ProjectFile,
-			ProjectStatus:       task.ProjectStatus,
-			PlanningDueDate:     task.PlanningDueDate,
-			ProjectDueDate:      task.ProjectDueDate,
-			Priority:            task.Priority,
-			ProjectComment:      task.ProjectComment,
+			ID:                        task.ID,
+			BoardID:                   task.BoardID,
+			Owner:                     task.Owner,
+			NameTask:                  task.NameTask,
+			PlanningDescriptionPersen: task.PlanningDescriptionPersen,
+			PlanningDescriptionFile:   task.PlanningDescriptionFile,
+			PlanningFile:              task.PlanningFile,
+			PlanningStatus:            task.PlanningStatus,
+			ProjectFile:               task.ProjectFile,
+			ProjectStatus:             task.ProjectStatus,
+			PlanningDueDate:           task.PlanningDueDate,
+			ProjectDueDate:            task.ProjectDueDate,
+			Priority:                  task.Priority,
+			ProjectComment:            task.ProjectComment,
 		}
 
 		for _, manager := range task.Manager {

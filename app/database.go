@@ -28,6 +28,9 @@ func ConnectDB() (*gorm.DB, error) {
 		&domain.Owner{},
 		&domain.Manager{},
 		&domain.Employee{},
+		&domain.PlanningFile{},
+		&domain.ProjectFile{},
+		&domain.PlanningDescriptionFile{},
 	); err != nil {
 		return nil, err
 	}

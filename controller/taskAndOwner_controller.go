@@ -280,11 +280,12 @@ func (t *TaskAndOwnerController) GetAllProjectFiles(ctx *fiber.Ctx) error {
 
 func (t *TaskAndOwnerController) UpdateTaskAndOwner(ctx *fiber.Ctx) error {
 	var (
-		task         domain.Task
-		planningFile domain.PlanningFile
-		projectFile  domain.ProjectFile
-		manager      domain.Manager
-		employee     domain.Employee
+		task                    domain.Task
+		planningFile            domain.PlanningFile
+		projectFile             domain.ProjectFile
+		manager                 domain.Manager
+		employee                domain.Employee
+		PlanningDescriptionFile domain.PlanningDescriptionFile
 	)
 
 	// Get user from context (either JWT or OAuth)
@@ -364,11 +365,23 @@ func (t *TaskAndOwnerController) UpdateTaskAndOwner(ctx *fiber.Ctx) error {
 		task.NameTask = nameTask
 	}
 
-	if planningDescription := ctx.FormValue("planning_description"); planningDescription != "" {
+	if planningDescriptionPersen := ctx.FormValue("planning_description_persen"); planningDescriptionPersen != "" {
 		if err := t.taskAndOwnerService.UpdateValidationOwner(uint(taskIdUint64), uint(userID)); err != nil {
 			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 		}
-		task.PlanningDescription = planningDescription
+		task.PlanningDescriptionPersen = planningDescriptionPersen
+	}
+
+	if planningDescriptionFile, err := ctx.FormFile("planning_description_file"); planningDescriptionFile != nil && err == nil {
+		if err := t.taskAndOwnerService.UpdateValidationOwner(uint(taskIdUint64), uint(userID)); err != nil {
+			return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		}
+		planningDescriptionFileUrl, planningDescriptionFileName, err := helper.SetupS3Uploader(planningDescriptionFile)
+		if err != nil {
+			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error uploading project file" + err.Error()})
+		}
+		PlanningDescriptionFile.FileUrl = planningDescriptionFileUrl
+		PlanningDescriptionFile.FileName = planningDescriptionFileName
 	}
 
 	if planningStatus := ctx.FormValue("planning_status"); planningStatus != "" {
@@ -414,7 +427,7 @@ func (t *TaskAndOwnerController) UpdateTaskAndOwner(ctx *fiber.Ctx) error {
 	}
 
 	// save
-	response, err := t.taskAndOwnerService.UpdateTaskAndOwner(&task, &manager, &employee, &planningFile, &projectFile, uint(taskIdUint64), uint(boardIdUint64))
+	response, err := t.taskAndOwnerService.UpdateTaskAndOwner(&task, &manager, &employee, &PlanningDescriptionFile, &planningFile, &projectFile, uint(taskIdUint64), uint(boardIdUint64))
 	if err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -546,6 +559,57 @@ func (t *TaskAndOwnerController) DeleteEmployee(ctx *fiber.Ctx) error {
 	}
 
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Employee deleted successfully"})
+}
+
+func (t *TaskAndOwnerController) DeletePlanningDescriptionFile(ctx *fiber.Ctx) error {
+	var authenticatedUserId uint64
+
+	if user := ctx.Locals("user"); user != nil {
+		if u, ok := user.(*domain.User); ok {
+			authenticatedUserId = u.ID
+		}
+	} else if userOauth := ctx.Locals("userOauth"); userOauth != nil {
+		if u, ok := userOauth.(*domain.User); ok {
+			authenticatedUserId = u.ID
+		}
+	}
+
+	if authenticatedUserId == 0 {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "User not authenticated"})
+	}
+
+	taskId := ctx.Params("id")
+	taskIdUint64, err := strconv.ParseUint(taskId, 10, 64)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid task Id"})
+	}
+
+	fileId := ctx.Params("file_id")
+	fileIdUint64, err := strconv.ParseUint(fileId, 10, 64)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid file Id"})
+	}
+
+	// Validate owner
+	if err := t.taskAndOwnerService.UpdateValidationOwner(uint(taskIdUint64), uint(authenticatedUserId)); err != nil {
+		return ctx.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	fileName, err := t.taskAndOwnerService.DeletePlanningDescriptionFile(uint(fileIdUint64))
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	// AWS S3 delete
+	err = helper.SetupS3Delete(fileName)
+	if err != nil {
+		if _, ok := err.(error); ok {
+			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		}
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{"message": "File deleted successfully"})
 }
 
 func (t *TaskAndOwnerController) DeletePlanningFile(ctx *fiber.Ctx) error {
