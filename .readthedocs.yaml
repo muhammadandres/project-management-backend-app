@@ -1,1 +1,1 @@
-version: 2build:  os: "ubuntu-22.04"  tools:    python: "3.8"python:  install:    - requirements: docs/requirements.txtsphinx:  configuration: docs/source/conf.py  fail_on_warning: true
+version: 2build:  os: "ubuntu-22.04"  tools:    python: "3.8"
