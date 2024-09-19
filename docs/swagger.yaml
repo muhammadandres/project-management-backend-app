@@ -1,0 +1,1486 @@
+definitions:
+  web.BoardResponse:
+    properties:
+      board_created_by:
+        properties:
+          user_email:
+            example: user@example.com
+            type: string
+          user_id:
+            example: 1
+            type: integer
+        type: object
+      board_id:
+        example: 1
+        type: integer
+      name_board:
+        example: My Project Board
+        type: string
+      tasks:
+        items:
+          $ref: '#/definitions/web.TaskInfo'
+        type: array
+    type: object
+  web.EmployeeResponse:
+    properties:
+      email:
+        example: employee@example.com
+        type: string
+    type: object
+  web.EmployeeWithInvitation:
+    properties:
+      email:
+        example: employee@example.com
+        type: string
+      invitation_status:
+        example: Pending
+        type: string
+      user_id:
+        example: 3
+        type: integer
+    type: object
+  web.ErrorResponse:
+    properties:
+      error:
+        example: Error Message
+        type: string
+    type: object
+  web.FileResponse:
+    properties:
+      file_name:
+        example: document.pdf
+        type: string
+      file_url:
+        example: https://example.com/file.pdf
+        type: string
+    type: object
+  web.ForgotPasswordRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+    type: object
+  web.GetAllUsersResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        items:
+          $ref: '#/definitions/web.UserDetail'
+        type: array
+      message:
+        example: Success
+        type: string
+    type: object
+  web.GetUserByIDResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        $ref: '#/definitions/web.UserDetail'
+      message:
+        example: Success
+        type: string
+    type: object
+  web.InvitationResponse:
+    properties:
+      id:
+        example: 1
+        type: integer
+      invitation_status:
+        example: Pending
+        type: string
+      role:
+        example: Manager
+        type: string
+      task_id:
+        example: 1
+        type: integer
+      user_id:
+        example: 2
+        type: integer
+    type: object
+  web.LoginRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      password:
+        example: password123
+        type: string
+    type: object
+  web.ManagerResponse:
+    properties:
+      email:
+        example: manager@example.com
+        type: string
+    type: object
+  web.ManagerWithInvitation:
+    properties:
+      email:
+        example: manager@example.com
+        type: string
+      invitation_status:
+        example: Accepted
+        type: string
+      user_id:
+        example: 2
+        type: integer
+    type: object
+  web.Owner:
+    properties:
+      email:
+        example: owner@example.com
+        type: string
+      user_id:
+        example: 1
+        type: integer
+    type: object
+  web.PlanningDescriptionFile:
+    properties:
+      file_name:
+        example: planning_description.pdf
+        type: string
+      file_url:
+        example: https://bucket-name.s3.amazonaws.com/planning_description.pdf
+        type: string
+      id:
+        example: 1
+        type: integer
+    type: object
+  web.PlanningFile:
+    properties:
+      file_name:
+        example: planning_document.docx
+        type: string
+      file_url:
+        example: https://bucket-name.s3.amazonaws.com/planning_document.docx
+        type: string
+      id:
+        example: 2
+        type: integer
+    type: object
+  web.ProjectFile:
+    properties:
+      file_name:
+        example: project_report.pdf
+        type: string
+      file_url:
+        example: https://bucket-name.s3.amazonaws.com/project_report.pdf
+        type: string
+      id:
+        example: 3
+        type: integer
+    type: object
+  web.ResetPasswordRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      new_password:
+        example: password123
+        type: string
+      reset_code:
+        example: "12345"
+        type: string
+    type: object
+  web.SignupRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      password:
+        example: password123
+        type: string
+    type: object
+  web.SuccessResponse:
+    properties:
+      message:
+        example: Success Message
+        type: string
+    type: object
+  web.TaskCreateResponse:
+    properties:
+      board_id:
+        example: 1
+        type: integer
+      name_task:
+        example: Implement feature X
+        type: string
+      owner_id:
+        example: 1
+        type: integer
+      task_id:
+        example: 1
+        type: integer
+      user_email:
+        example: user@example.com
+        type: string
+      user_id:
+        example: 1
+        type: integer
+    type: object
+  web.TaskInfo:
+    properties:
+      board_id:
+        example: 1
+        type: integer
+      employee:
+        items:
+          $ref: '#/definitions/web.EmployeeWithInvitation'
+        type: array
+      id:
+        example: 1
+        type: integer
+      manager:
+        items:
+          $ref: '#/definitions/web.ManagerWithInvitation'
+        type: array
+      name_task:
+        example: Implement feature X
+        type: string
+      owner:
+        $ref: '#/definitions/web.Owner'
+      planning_description_files:
+        items:
+          $ref: '#/definitions/web.PlanningDescriptionFile'
+        type: array
+      planning_description_persen:
+        example: "50"
+        type: string
+      planning_due_date:
+        example: "2023-12-31"
+        type: string
+      planning_file:
+        items:
+          $ref: '#/definitions/web.PlanningFile'
+        type: array
+      planning_status:
+        example: Approved
+        type: string
+      priority:
+        example: High
+        type: string
+      project_comment:
+        example: Making good progress
+        type: string
+      project_due_date:
+        example: "2024-01-15"
+        type: string
+      project_file:
+        items:
+          $ref: '#/definitions/web.ProjectFile'
+        type: array
+      project_status:
+        example: Undone
+        type: string
+    type: object
+  web.TaskResponse:
+    properties:
+      board_id:
+        example: 1
+        type: integer
+      employee:
+        items:
+          $ref: '#/definitions/web.EmployeeWithInvitation'
+        type: array
+      id:
+        example: 1
+        type: integer
+      manager:
+        items:
+          $ref: '#/definitions/web.ManagerWithInvitation'
+        type: array
+      name_task:
+        example: Implement feature X
+        type: string
+      owner:
+        $ref: '#/definitions/web.Owner'
+      planning_description_files:
+        items:
+          $ref: '#/definitions/web.PlanningDescriptionFile'
+        type: array
+      planning_description_persen:
+        example: "50"
+        type: string
+      planning_due_date:
+        example: "2023-12-31"
+        type: string
+      planning_file:
+        items:
+          $ref: '#/definitions/web.PlanningFile'
+        type: array
+      planning_status:
+        example: Approved
+        type: string
+      priority:
+        example: High
+        type: string
+      project_comment:
+        example: Making good progress
+        type: string
+      project_due_date:
+        example: "2024-01-15"
+        type: string
+      project_file:
+        items:
+          $ref: '#/definitions/web.ProjectFile'
+        type: array
+      project_status:
+        example: Undone
+        type: string
+    type: object
+  web.TokenResponse:
+    properties:
+      message:
+        example: Signup successfully
+        type: string
+      token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+    type: object
+  web.UpdateResponseTask:
+    properties:
+      board_id:
+        example: 1
+        type: integer
+      emails_sent:
+        example: Email send infomation
+        type: string
+      employees:
+        items:
+          $ref: '#/definitions/web.EmployeeResponse'
+        type: array
+      managers:
+        items:
+          $ref: '#/definitions/web.ManagerResponse'
+        type: array
+      name_task:
+        example: Updated Task Name
+        type: string
+      planning_description_files:
+        items:
+          $ref: '#/definitions/web.FileResponse'
+        type: array
+      planning_description_persen:
+        example: "75"
+        type: string
+      planning_due_date:
+        example: "2023-12-31"
+        type: string
+      planning_files:
+        items:
+          $ref: '#/definitions/web.FileResponse'
+        type: array
+      planning_status:
+        enum:
+        - Approved
+        - Not Approved
+        example: Approved
+        type: string
+      priority:
+        enum:
+        - Low
+        - Medium
+        - High
+        example: High
+        type: string
+      project_comment:
+        example: Updated project comment
+        type: string
+      project_due_date:
+        example: "2024-01-15"
+        type: string
+      project_files:
+        items:
+          $ref: '#/definitions/web.FileResponse'
+        type: array
+      project_status:
+        enum:
+        - Working
+        - Done
+        - Undone
+        example: Working
+        type: string
+      task_id:
+        example: 1
+        type: integer
+    type: object
+  web.UpdateUser:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+    type: object
+  web.UserDetail:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      id:
+        example: 1
+        type: integer
+    type: object
+  web.WebResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data: {}
+      message:
+        example: Success message
+        type: string
+    type: object
+info:
+  contact:
+    email: m.andres.novrizal@gmail.com
+  description: API documentation
+  title: Project Management App
+paths:
+  /auth/oauth:
+    get:
+      consumes:
+      - application/json
+      description: Start the Google OAuth process. If successful, the user will be
+        redirected to the URL "(frontendURL)/auth-success?email=(encodedUserEmail)&token=(encodedToken)"
+        with the user's email and token in the query parameters.
+      produces:
+      - application/json
+      responses:
+        "302":
+          description: Redirect to success URL
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+      summary: Initiate Google OAuth
+      tags:
+      - users
+  /board:
+    post:
+      consumes:
+      - application/json
+      description: Create a new board. This endpoint requires cookie authentication.
+      parameters:
+      - description: Name of the board
+        in: formData
+        name: name_board
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/web.BoardResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Create a new board
+      tags:
+      - boards
+  /board/{boardId}/task/{taskId}:
+    put:
+      consumes:
+      - multipart/form-data
+      description: Update various aspects of a task including manager, employee, files,
+        and other details. This endpoint requires cookie authentication.
+      parameters:
+      - description: Board ID parameter
+        example: 1
+        in: path
+        minimum: 1
+        name: request
+        required: true
+        type: integer
+      - description: Task ID parameter
+        example: 1
+        in: path
+        minimum: 1
+        name: request2
+        required: true
+        type: integer
+      - description: Manager email
+        example: example@gmail.com
+        in: formData
+        name: request3
+        type: string
+      - description: Employee email
+        example: example@gmail.com
+        in: formData
+        name: request4
+        type: string
+      - description: Planning file
+        in: formData
+        name: request5
+        type: file
+      - description: Project file
+        in: formData
+        name: request6
+        type: file
+      - description: Name of the task
+        example: example name task
+        in: formData
+        name: request7
+        type: string
+      - description: Planning description percentage
+        example: "25"
+        in: formData
+        name: request8
+        type: string
+      - description: Planning description file
+        in: formData
+        name: request9
+        type: file
+      - description: Planning status
+        enum:
+        - Approved
+        - Not Approved
+        in: formData
+        name: request10
+        type: string
+      - description: Project status
+        enum:
+        - Working
+        - Done
+        - Undone
+        in: formData
+        name: request11
+        type: string
+      - description: Planning due date
+        example: 17-11-2002
+        in: formData
+        name: request12
+        type: string
+      - description: Project due date
+        example: 17-11-2002
+        in: formData
+        name: request13
+        type: string
+      - description: Priority
+        enum:
+        - Low
+        - Medium
+        - High
+        in: formData
+        name: request14
+        type: string
+      - description: Project comment
+        example: example comment
+        in: formData
+        name: request15
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/web.UpdateResponseTask'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Update a task
+      tags:
+      - tasks
+  /board/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a board by its ID.  This endpoint requires cookie authentication.
+      parameters:
+      - description: Board ID parameter
+        example: 1
+        in: path
+        minimum: 1
+        name: request
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Delete a board
+      tags:
+      - boards
+    put:
+      consumes:
+      - application/json
+      description: Edit a board's name by its ID.  This endpoint requires cookie authentication.
+      parameters:
+      - description: Board ID parameter
+        example: 1
+        in: path
+        minimum: 1
+        name: request
+        required: true
+        type: integer
+      - description: New name of the board
+        in: formData
+        name: name_board
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.BoardResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Edit a board
+      tags:
+      - boards
+  /boards:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all boards.  This endpoint requires cookie authentication.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/web.BoardResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Get all boards
+      tags:
+      - boards
+  /invitations:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all invitations. This endpoint requires cookie authentication.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/web.InvitationResponse'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Get all invitations
+      tags:
+      - invitations
+  /invitations/{invitationID}:
+    post:
+      consumes:
+      - application/json
+      description: Accept or reject an invitation to a task. This endpoint requires
+        cookie authentication.
+      parameters:
+      - description: Invitation ID parameter
+        example: 1
+        in: path
+        minimum: 1
+        name: request
+        required: true
+        type: integer
+      - description: Invitation response status
+        enum:
+        - accept
+        - reject
+        in: query
+        name: request
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/web.InvitationResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Respond to an invitation
+      tags:
+      - invitations
+  /task/{}:board_id}:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Create a new task and assign it to the authenticated user as the
+        owner. This endpoint requires cookie authentication.
+      parameters:
+      - description: Board ID parameter
+        example: 1
+        in: path
+        minimum: 1
+        name: request
+        required: true
+        type: integer
+      - description: Name of the task
+        example: name_task
+        in: formData
+        name: request
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/web.TaskCreateResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Create a new task and assign an owner
+      tags:
+      - tasks
+  /task/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Remove a task and its associated owner. This endpoint requires
+        cookie authentication.
+      parameters:
+      - description: Task ID parameter
+        example: 1
+        in: path
+        minimum: 1
+        name: request
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Delete a task and its owner
+      tags:
+      - tasks
+    get:
+      consumes:
+      - application/json
+      description: Get detailed information about a task by its ID. This endpoint
+        requires cookie authentication.
+      parameters:
+      - description: Board ID parameter
+        example: 1
+        in: path
+        minimum: 1
+        name: request
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/web.TaskResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Get a task by ID
+      tags:
+      - tasks
+  /task/{id}/employee/{employee_id}:
+    delete:
+      consumes:
+      - application/json
+      description: Remove an employee from a specific task. This endpoint requires
+        cookie authentication.
+      parameters:
+      - description: Task ID parameter
+        example: 1
+        in: path
+        minimum: 1
+        name: request
+        required: true
+        type: integer
+      - description: Employee ID parameter
+        example: 1
+        in: path
+        minimum: 1
+        name: request
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Delete an employee from a task
+      tags:
+      - tasks
+  /task/{id}/manager/{manager_id}:
+    delete:
+      consumes:
+      - application/json
+      description: Remove a manager from a specific task. This endpoint requires cookie
+        authentication.
+      parameters:
+      - description: Task ID parameter
+        example: 1
+        in: path
+        minimum: 1
+        name: request
+        required: true
+        type: integer
+      - description: Manager ID parameter
+        example: 1
+        in: path
+        minimum: 1
+        name: request
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Delete a manager from a task
+      tags:
+      - tasks
+  /task/{id}/planning-description-file/{file_id}:
+    delete:
+      consumes:
+      - application/json
+      description: Remove a planning description file from a specific task. This endpoint
+        requires cookie authentication.
+      parameters:
+      - description: Task ID parameter
+        example: 1
+        in: path
+        minimum: 1
+        name: request
+        required: true
+        type: integer
+      - description: File ID parameter
+        example: 1
+        in: path
+        minimum: 1
+        name: request
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Delete a planning description file
+      tags:
+      - tasks
+  /task/{id}/planning-file/{file_id}:
+    delete:
+      consumes:
+      - application/json
+      description: Remove a planning file from a specific task. This endpoint requires
+        cookie authentication.
+      parameters:
+      - description: Task ID parameter
+        example: 1
+        in: path
+        minimum: 1
+        name: request
+        required: true
+        type: integer
+      - description: File ID parameter
+        example: 1
+        in: path
+        minimum: 1
+        name: request
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Delete a planning file
+      tags:
+      - tasks
+  /task/{id}/project-file/{file_id}:
+    delete:
+      consumes:
+      - application/json
+      description: Remove a project file from a specific task. This endpoint requires
+        cookie authentication.
+      parameters:
+      - description: Task ID parameter
+        example: 1
+        in: path
+        minimum: 1
+        name: request
+        required: true
+        type: integer
+      - description: File ID parameter
+        example: 1
+        in: path
+        minimum: 1
+        name: request
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Delete a project file
+      tags:
+      - tasks
+  /tasks:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all tasks with their owners. This endpoint requires
+        cookie authentication.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.WebResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/web.TaskResponse'
+                  type: array
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Get all tasks
+      tags:
+      - tasks
+  /user/forgot-password:
+    post:
+      consumes:
+      - application/json
+      description: Send a reset code to the user's email
+      parameters:
+      - description: User's email
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/web.ForgotPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+      summary: Initiate forgot password process
+      tags:
+      - users
+  /user/login:
+    post:
+      consumes:
+      - application/json
+      description: Login with user credentials
+      parameters:
+      - description: User login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/web.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          headers:
+            Set-Cookie:
+              description: Authorization
+              type: string
+          schema:
+            $ref: '#/definitions/web.TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+      summary: Authenticate a user
+      tags:
+      - users
+  /user/reset-password:
+    post:
+      consumes:
+      - application/json
+      description: Reset the user's password using the provided reset code
+      parameters:
+      - description: Password reset info
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/web.ResetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+      summary: Reset user's password
+      tags:
+      - users
+  /user/signup:
+    post:
+      consumes:
+      - application/json
+      description: Create a new user account
+      parameters:
+      - description: User signup information
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/web.SignupRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/web.TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+      summary: Register a new user
+      tags:
+      - users
+  /users:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve information for all users
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.GetAllUsersResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/web.UserDetail'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+      summary: Get all users
+      tags:
+      - users
+  /users/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a user by their ID. This endpoint requires cookie authentication.
+      parameters:
+      - description: User ID parameter
+        example: 1
+        in: path
+        minimum: 1
+        name: request
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "401":
+          description: Unauthorized - Cookie authentication required
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Delete a user
+      tags:
+      - users
+    get:
+      consumes:
+      - application/json
+      description: Retrieve user details by user ID
+      parameters:
+      - description: User ID parameter
+        example: 1
+        in: path
+        minimum: 1
+        name: request
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.GetUserByIDResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+      summary: Get user by ID
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Update a user's information. This endpoint requires cookie authentication.
+      parameters:
+      - description: User ID parameter
+        example: 1
+        in: path
+        minimum: 1
+        name: request
+        required: true
+        type: integer
+      - description: User's email
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/web.UpdateUser'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/web.UpdateUser'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "401":
+          description: Unauthorized - Cookie authentication required
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Update a user
+      tags:
+      - users
+swagger: "2.0"

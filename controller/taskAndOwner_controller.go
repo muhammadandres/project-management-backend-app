@@ -18,6 +18,20 @@ func NewTaskController(taskAndOwnerService service.TaskAndOwnerService) *TaskAnd
 	return &TaskAndOwnerController{taskAndOwnerService}
 }
 
+// CreateTaskAndOwner godoc
+// @Summary Create a new task and assign an owner
+// @Description Create a new task and assign it to the authenticated user as the owner. This endpoint requires cookie authentication.
+// @Tags tasks
+// @Accept multipart/form-data
+// @Produce json
+// @Param request path int true "Board ID parameter" minimum(1) example(1)
+// @Param request formData string true "Name of the task" example(name_task)
+// @Security CookieAuth
+// @Success 201 {object} web.WebResponse{data=web.TaskCreateResponse}
+// @Failure 400 {object} web.ErrorResponse
+// @Failure 401 {object} web.ErrorResponse
+// @Failure 500 {object} web.ErrorResponse
+// @Router /task/{}:board_id} [post]
 func (t *TaskAndOwnerController) CreateTaskAndOwner(ctx *fiber.Ctx) error {
 	var user *domain.User
 	userCtx := ctx.Locals("user")
@@ -86,6 +100,19 @@ func (t *TaskAndOwnerController) CreateTaskAndOwner(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusCreated).JSON(response)
 }
 
+// GetTaskAndOwnerById godoc
+// @Summary Get a task by ID
+// @Description Get detailed information about a task by its ID. This endpoint requires cookie authentication.
+// @Tags tasks
+// @Accept json
+// @Produce json
+// @Param request path int true "Board ID parameter" minimum(1) example(1)
+// @Security CookieAuth
+// @Success 200 {object} web.WebResponse{data=web.TaskResponse}
+// @Failure 400 {object} web.ErrorResponse
+// @Failure 404 {object} web.ErrorResponse
+// @Failure 500 {object} web.ErrorResponse
+// @Router /task/{id} [get]
 func (t *TaskAndOwnerController) GetTaskAndOwnerById(ctx *fiber.Ctx) error {
 	taskId := ctx.Params("id")
 	taskIdUint64, err := strconv.ParseUint(taskId, 10, 64)
@@ -101,6 +128,17 @@ func (t *TaskAndOwnerController) GetTaskAndOwnerById(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(web.CreateResponseTask(task))
 }
 
+// GetAllTasksAndOwners godoc
+// @Summary Get all tasks
+// @Description Get a list of all tasks with their owners. This endpoint requires cookie authentication.
+// @Tags tasks
+// @Accept json
+// @Produce json
+// @Security CookieAuth
+// @Success 200 {object} web.WebResponse{data=[]web.TaskResponse{object,object}}
+// @Failure 404 {object} web.ErrorResponse
+// @Failure 500 {object} web.ErrorResponse
+// @Router /tasks [get]
 func (t *TaskAndOwnerController) GetAllTasksAndOwners(ctx *fiber.Ctx) error {
 	tasks, err := t.taskAndOwnerService.FindAllTasksAndOwners()
 	if err != nil {
@@ -278,6 +316,33 @@ func (t *TaskAndOwnerController) GetAllProjectFiles(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(response)
 }
 
+// UpdateTaskAndOwner godoc
+// @Summary Update a task
+// @Description Update various aspects of a task including manager, employee, files, and other details. This endpoint requires cookie authentication.
+// @Tags tasks
+// @Accept multipart/form-data
+// @Produce json
+// @Param request path int true "Board ID parameter" minimum(1) example(1)
+// @Param request2 path int true "Task ID parameter" minimum(1) example(1)
+// @Param request3 formData string false "Manager email" example(example@gmail.com)
+// @Param request4 formData string false "Employee email" example(example@gmail.com)
+// @Param request5 formData file false "Planning file"
+// @Param request6 formData file false "Project file"
+// @Param request7 formData string false "Name of the task" example(example name task)
+// @Param request8 formData string false "Planning description percentage" example(25)
+// @Param request9 formData file false "Planning description file"
+// @Param request10 formData string false "Planning status" Enums(Approved,Not Approved)
+// @Param request11 formData string false "Project status" Enums(Working,Done,Undone)
+// @Param request12 formData string false "Planning due date" example(17-11-2002)
+// @Param request13 formData string false "Project due date" example(17-11-2002)
+// @Param request14 formData string false "Priority" Enums(Low,Medium,High)
+// @Param request15 formData string false "Project comment" example(example comment)
+// @Security CookieAuth
+// @Success 200 {object} web.WebResponse{data=web.UpdateResponseTask}
+// @Failure 400 {object} web.ErrorResponse
+// @Failure 401 {object} web.ErrorResponse
+// @Failure 500 {object} web.ErrorResponse
+// @Router /board/{boardId}/task/{taskId} [put]
 func (t *TaskAndOwnerController) UpdateTaskAndOwner(ctx *fiber.Ctx) error {
 	var (
 		task                    domain.Task
@@ -439,6 +504,20 @@ func (t *TaskAndOwnerController) UpdateTaskAndOwner(ctx *fiber.Ctx) error {
 	})
 }
 
+// RespondToInvitation godoc
+// @Summary Respond to an invitation
+// @Description Accept or reject an invitation to a task. This endpoint requires cookie authentication.
+// @Tags invitations
+// @Accept json
+// @Produce json
+// @Param request path int true "Invitation ID parameter" minimum(1) example(1)
+// @Param request query string true "Invitation response status" Enums(accept, reject)
+// @Security CookieAuth
+// @Success 200 {object} web.WebResponse{data=web.InvitationResponse}
+// @Failure 400 {object} web.ErrorResponse
+// @Failure 401 {object} web.ErrorResponse
+// @Failure 500 {object} web.ErrorResponse
+// @Router /invitations/{invitationID} [post]
 func (t *TaskAndOwnerController) RespondToInvitation(ctx *fiber.Ctx) error {
 	invitationID, err := strconv.ParseUint(ctx.Params("invitationID"), 10, 64)
 	if err != nil {
@@ -458,6 +537,16 @@ func (t *TaskAndOwnerController) RespondToInvitation(ctx *fiber.Ctx) error {
 	})
 }
 
+// GetAllInvitations godoc
+// @Summary Get all invitations
+// @Description Get a list of all invitations. This endpoint requires cookie authentication.
+// @Tags invitations
+// @Accept json
+// @Produce json
+// @Security CookieAuth
+// @Success 200 {object} web.WebResponse{data=[]web.InvitationResponse}
+// @Failure 500 {object} web.ErrorResponse
+// @Router /invitations [get]
 func (t *TaskAndOwnerController) GetAllInvitations(ctx *fiber.Ctx) error {
 	invitations, err := t.taskAndOwnerService.GetAllInvitations()
 	if err != nil {
@@ -471,6 +560,20 @@ func (t *TaskAndOwnerController) GetAllInvitations(ctx *fiber.Ctx) error {
 	})
 }
 
+// DeleteManager godoc
+// @Summary Delete a manager from a task
+// @Description Remove a manager from a specific task. This endpoint requires cookie authentication.
+// @Tags tasks
+// @Accept json
+// @Produce json
+// @Param request path int true "Task ID parameter" minimum(1) example(1)
+// @Param request path int true "Manager ID parameter" minimum(1) example(1)
+// @Security CookieAuth
+// @Success 200 {object} web.SuccessResponse
+// @Failure 400 {object} web.ErrorResponse
+// @Failure 401 {object} web.ErrorResponse
+// @Failure 500 {object} web.ErrorResponse
+// @Router /task/{id}/manager/{manager_id} [delete]
 func (t *TaskAndOwnerController) DeleteManager(ctx *fiber.Ctx) error {
 	var userId, userOauthId uint64
 
@@ -517,6 +620,20 @@ func (t *TaskAndOwnerController) DeleteManager(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Manager deleted successfully"})
 }
 
+// DeleteEmployee godoc
+// @Summary Delete an employee from a task
+// @Description Remove an employee from a specific task. This endpoint requires cookie authentication.
+// @Tags tasks
+// @Accept json
+// @Produce json
+// @Param request path int true "Task ID parameter" minimum(1) example(1)
+// @Param request path int true "Employee ID parameter" minimum(1) example(1)
+// @Security CookieAuth
+// @Success 200 {object} web.SuccessResponse
+// @Failure 400 {object} web.ErrorResponse
+// @Failure 401 {object} web.ErrorResponse
+// @Failure 500 {object} web.ErrorResponse
+// @Router /task/{id}/employee/{employee_id} [delete]
 func (t *TaskAndOwnerController) DeleteEmployee(ctx *fiber.Ctx) error {
 	taskId := ctx.Params("id")
 	taskIdUint64, err := strconv.ParseUint(taskId, 10, 64)
@@ -561,6 +678,20 @@ func (t *TaskAndOwnerController) DeleteEmployee(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Employee deleted successfully"})
 }
 
+// DeletePlanningDescriptionFile godoc
+// @Summary Delete a planning description file
+// @Description Remove a planning description file from a specific task. This endpoint requires cookie authentication.
+// @Tags tasks
+// @Accept json
+// @Produce json
+// @Param request path int true "Task ID parameter" minimum(1) example(1)
+// @Param request path int true "File ID parameter" minimum(1) example(1)
+// @Security CookieAuth
+// @Success 200 {object} web.SuccessResponse
+// @Failure 400 {object} web.ErrorResponse
+// @Failure 401 {object} web.ErrorResponse
+// @Failure 500 {object} web.ErrorResponse
+// @Router /task/{id}/planning-description-file/{file_id} [delete]
 func (t *TaskAndOwnerController) DeletePlanningDescriptionFile(ctx *fiber.Ctx) error {
 	var authenticatedUserId uint64
 
@@ -612,6 +743,20 @@ func (t *TaskAndOwnerController) DeletePlanningDescriptionFile(ctx *fiber.Ctx) e
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{"message": "File deleted successfully"})
 }
 
+// DeletePlanningFile godoc
+// @Summary Delete a planning file
+// @Description Remove a planning file from a specific task. This endpoint requires cookie authentication.
+// @Tags tasks
+// @Accept json
+// @Produce json
+// @Param request path int true "Task ID parameter" minimum(1) example(1)
+// @Param request path int true "File ID parameter" minimum(1) example(1)
+// @Security CookieAuth
+// @Success 200 {object} web.SuccessResponse
+// @Failure 400 {object} web.ErrorResponse
+// @Failure 401 {object} web.ErrorResponse
+// @Failure 500 {object} web.ErrorResponse
+// @Router /task/{id}/planning-file/{file_id} [delete]
 func (t *TaskAndOwnerController) DeletePlanningFile(ctx *fiber.Ctx) error {
 	var authenticatedUserId uint64
 
@@ -663,6 +808,20 @@ func (t *TaskAndOwnerController) DeletePlanningFile(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{"message": "File deleted successfully"})
 }
 
+// DeleteProjectFile godoc
+// @Summary Delete a project file
+// @Description Remove a project file from a specific task. This endpoint requires cookie authentication.
+// @Tags tasks
+// @Accept json
+// @Produce json
+// @Param request path int true "Task ID parameter" minimum(1) example(1)
+// @Param request path int true "File ID parameter" minimum(1) example(1)
+// @Security CookieAuth
+// @Success 200 {object} web.SuccessResponse
+// @Failure 400 {object} web.ErrorResponse
+// @Failure 401 {object} web.ErrorResponse
+// @Failure 500 {object} web.ErrorResponse
+// @Router /task/{id}/project-file/{file_id} [delete]
 func (t *TaskAndOwnerController) DeleteProjectFile(ctx *fiber.Ctx) error {
 	var authenticatedUserId uint64
 
@@ -714,6 +873,19 @@ func (t *TaskAndOwnerController) DeleteProjectFile(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{"message": "File deleted successfully"})
 }
 
+// DeleteTaskAndOwner godoc
+// @Summary Delete a task and its owner
+// @Description Remove a task and its associated owner. This endpoint requires cookie authentication.
+// @Tags tasks
+// @Accept json
+// @Produce json
+// @Param request path int true "Task ID parameter" minimum(1) example(1)
+// @Security CookieAuth
+// @Success 200 {object} web.SuccessResponse
+// @Failure 400 {object} web.ErrorResponse
+// @Failure 401 {object} web.ErrorResponse
+// @Failure 500 {object} web.ErrorResponse
+// @Router /task/{id} [delete]
 func (t *TaskAndOwnerController) DeleteTaskAndOwner(ctx *fiber.Ctx) error {
 	taskId := ctx.Params("id")
 	taskIdUint64, err := strconv.ParseUint(taskId, 10, 64)

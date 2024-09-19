@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"log"
 	"net/smtp"
+	"os"
 )
 
 func SendEmail(to []string, subject, htmlBody string) error {
-	username := "796198002@smtp-brevo.com"
-	password := "mRMx2zd5ca9VX1Cr"
-	smtpHost := "smtp-relay.brevo.com"
-	smtpPort := "587"
+	username := os.Getenv("BREVO_USERNAME")
+	password := os.Getenv("BREVO_PASSWORD")
+	smtpHost := os.Getenv("SMTP_HOST")
+	smtpPort := os.Getenv("SMPTP_PORT")
 
 	from := "manajementugasapp@gmail.com"
 

@@ -30,6 +30,19 @@ func NewUserController(userService service.UserService, store *session.Store) *U
 	}
 }
 
+// SignupUser godoc
+// @Summary      Register a new user
+// @Description  Create a new user account
+// @Tags         users
+// @Accept       json
+// @Produce      json
+// @Param        request body web.SignupRequest true "User signup information"
+// @Success      201  {object}  web.TokenResponse
+// @Failure      400  {object}  web.ErrorResponse
+// @Failure      409  {object}  web.ErrorResponse
+// @Failure      500  {object}  web.ErrorResponse
+// @Header       200 {string} Set-Cookie "Authorization"
+// @Router       /user/signup [post]
 func (c *UserController) SignupUser(ctx *fiber.Ctx) error {
 	var user *domain.User
 	if err := ctx.BodyParser(&user); err != nil {
@@ -66,6 +79,20 @@ func (c *UserController) SignupUser(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusCreated).JSON(fiber.Map{"message": "Signup successfully", "token": tokenString})
 }
 
+// LoginUser godoc
+// @Summary      Authenticate a user
+// @Description  Login with user credentials
+// @Tags         users
+// @Accept       json
+// @Produce      json
+// @Param        request body web.LoginRequest true "User login credentials"
+// @Success      200  {object}  web.TokenResponse
+// @Failure      400  {object}  web.ErrorResponse
+// @Failure      401  {object}  web.ErrorResponse
+// @Failure      404  {object}  web.ErrorResponse
+// @Failure      500  {object}  web.ErrorResponse
+// @Header       200 {string} Set-Cookie "Authorization"
+// @Router       /user/login [post]
 func (c *UserController) LoginUser(ctx *fiber.Ctx) error {
 	var user domain.User
 	if err := ctx.BodyParser(&user); err != nil {
@@ -106,6 +133,16 @@ func (c *UserController) LoginUser(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusCreated).JSON(fiber.Map{"message": "Signup successfully", "token": tokenString})
 }
 
+// GoogleOauth godoc
+// @Summary      Initiate Google OAuth
+// @Description  Start the Google OAuth process. If successful, the user will be redirected to the URL "(frontendURL)/auth-success?email=(encodedUserEmail)&token=(encodedToken)" with the user's email and token in the query parameters.
+// @Tags         users
+// @Accept  json
+// @Produce      json
+// @Success      302  "Redirect to success URL"
+// @Failure      400  {object}  web.ErrorResponse
+// @Failure      500  {object}  web.ErrorResponse
+// @Router       /auth/oauth [get]
 func (c *UserController) GoogleOauth(ctx *fiber.Ctx) error {
 	config := helper.SetupGoogleAuth()
 	url := config.AuthCodeURL("state", oauth2.AccessTypeOffline)
@@ -113,9 +150,7 @@ func (c *UserController) GoogleOauth(ctx *fiber.Ctx) error {
 	fmt.Println("Authorization URL:", url)
 	fmt.Println("Request headers:", ctx.GetReqHeaders())
 
-	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
-		"authorizationUrl": url,
-	})
+	return nil
 }
 
 func (c *UserController) GoogleCallback(ctx *fiber.Ctx) error {
@@ -182,6 +217,17 @@ func (c *UserController) GoogleCallback(ctx *fiber.Ctx) error {
 	return ctx.Redirect(redirectURL)
 }
 
+// ForgotPassword godoc
+// @Summary Initiate forgot password process
+// @Description Send a reset code to the user's email
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param        request body web.ForgotPasswordRequest true "User's email"
+// @Success      200  {object}  web.SuccessResponse
+// @Failure      400  {object}  web.ErrorResponse
+// @Failure      500  {object}  web.ErrorResponse
+// @Router /user/forgot-password [post]
 func (c *UserController) ForgotPassword(ctx *fiber.Ctx) error {
 	var request struct {
 		Email string `json:"email"`
@@ -200,6 +246,17 @@ func (c *UserController) ForgotPassword(ctx *fiber.Ctx) error {
 	})
 }
 
+// ResetPassword godoc
+// @Summary Reset user's password
+// @Description Reset the user's password using the provided reset code
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param        request body web.ResetPasswordRequest true "Password reset info"
+// @Success      200  {object}  web.SuccessResponse
+// @Failure      400  {object}  web.ErrorResponse
+// @Failure      500  {object}  web.ErrorResponse
+// @Router /user/reset-password [post]
 func (c *UserController) ResetPassword(ctx *fiber.Ctx) error {
 	var request struct {
 		Email       string `json:"email"`
@@ -220,6 +277,18 @@ func (c *UserController) ResetPassword(ctx *fiber.Ctx) error {
 	})
 }
 
+// GetUserByID godoc
+// @Summary Get user by ID
+// @Description Retrieve user details by user ID
+// @Tags users
+// @Accept  json
+// @Produce  json
+// @Param   request path int true "User ID parameter" minimum(1) example(1)
+// @Success 200  {object} web.GetUserByIDResponse
+// @Failure 400  {object} web.ErrorResponse
+// @Failure 404  {object} web.ErrorResponse
+// @Failure 500  {object} web.ErrorResponse
+// @Router  /users/{id} [get]
 func (c *UserController) GetUserByID(ctx *fiber.Ctx) error {
 	userId := ctx.Params("id")
 	// Konversi userId ke uint64
@@ -236,8 +305,18 @@ func (c *UserController) GetUserByID(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(web.CreateResponseUser(user))
 }
 
+// GetAllUsers godoc
+// @Summary Get all users
+// @Description Retrieve information for all users
+// @Tags users
+// @Accept  json
+// @Produce json
+// @Response 200 {object} web.GetAllUsersResponse{data=[]web.UserDetail{object,object}}
+// @Failure 400  {object} web.ErrorResponse
+// @Failure 404  {object} web.ErrorResponse
+// @Failure 500  {object} web.ErrorResponse
+// @Router /users [get]
 func (c *UserController) GetAllUsers(ctx *fiber.Ctx) error {
-	// userEmail := "land45122@gmail.com" // email user
 	users, err := c.userService.FindAllUsers()
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "No users found"})
@@ -250,6 +329,21 @@ func (c *UserController) GetAllUsers(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(response)
 }
 
+// UpdateUser godoc
+// @Summary Update a user
+// @Description Update a user's information. This endpoint requires cookie authentication.
+// @Tags users
+// @Accept  json
+// @Produce  json
+// @Security CookieAuth
+// @Param   request path int true "User ID parameter" minimum(1) example(1)
+// @Param        request body web.UpdateUser true "User's email"
+// @Success 200  {object} web.UpdateUser
+// @Failure 400 {object} web.ErrorResponse
+// @Failure 401 {object} web.ErrorResponse "Unauthorized - Cookie authentication required"
+// @Failure 404 {object} web.ErrorResponse
+// @Failure 500 {object} web.ErrorResponse
+// @Router /users/{id} [put]
 func (c *UserController) UpdateUser(ctx *fiber.Ctx) error {
 	userId := ctx.Params("id")
 	// Konversi userId ke uint64
@@ -277,6 +371,20 @@ func (c *UserController) UpdateUser(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(web.CreateResponseUser(updateUser))
 }
 
+// DeleteUser godoc
+// @Summary Delete a user
+// @Description Delete a user by their ID. This endpoint requires cookie authentication.
+// @Tags users
+// @Accept  json
+// @Produce  json
+// @Security CookieAuth
+// @Param   request path int true "User ID parameter" minimum(1) example(1)
+// @Success 200  {object} web.SuccessResponse
+// @Failure 400 {object} web.ErrorResponse
+// @Failure 401 {object} web.ErrorResponse "Unauthorized - Cookie authentication required"
+// @Failure 404 {object} web.ErrorResponse
+// @Failure 500 {object} web.ErrorResponse
+// @Router /users/{id} [delete]
 func (c *UserController) DeleteUser(ctx *fiber.Ctx) error {
 	userId := ctx.Params("id")
 	// Konversi userId ke uint64

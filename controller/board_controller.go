@@ -15,6 +15,19 @@ func NewBoardController(boardService service.BoardService) *BoardController {
 	return &BoardController{boardService}
 }
 
+// CreateBoard godoc
+// @Summary Create a new board
+// @Description Create a new board. This endpoint requires cookie authentication.
+// @Tags boards
+// @Accept json
+// @Produce json
+// @Security CookieAuth
+// @Param name_board formData string true "Name of the board"
+// @Success 201 {object} web.BoardResponse
+// @Failure 400 {object} web.ErrorResponse
+// @Failure 401 {object} web.ErrorResponse
+// @Failure 500 {object} web.ErrorResponse
+// @Router /board [post]
 func (c *BoardController) CreateBoard(ctx *fiber.Ctx) error {
 	var user *domain.User
 	userCtx := ctx.Locals("user")
@@ -151,6 +164,18 @@ func (c *BoardController) GetBoardById(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(response)
 }
 
+// GetAllBoards godoc
+// @Summary Get all boards
+// @Description Retrieve all boards.  This endpoint requires cookie authentication.
+// @Tags boards
+// @Accept json
+// @Produce json
+// @Security CookieAuth
+// @Success 200 {array} web.BoardResponse
+// @Failure 400 {object} web.ErrorResponse
+// @Failure 404 {object} web.ErrorResponse
+// @Failure 500 {object} web.ErrorResponse
+// @Router /boards [get]
 func (c *BoardController) GetAllBoards(ctx *fiber.Ctx) error {
 	boards, err := c.boardService.GetAllBoards()
 	if err != nil {
@@ -174,6 +199,19 @@ func (c *BoardController) GetAllBoards(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(response)
 }
 
+// DeleteBoardById godoc
+// @Summary Delete a board
+// @Description Delete a board by its ID.  This endpoint requires cookie authentication.
+// @Tags boards
+// @Accept json
+// @Produce json
+// @Security CookieAuth
+// @Param   request path int true "Board ID parameter" minimum(1) example(1)
+// @Success 200 {object} web.SuccessResponse
+// @Failure 400 {object} web.ErrorResponse
+// @Failure 404 {object} web.ErrorResponse
+// @Failure 500 {object} web.ErrorResponse
+// @Router /board/{id} [delete]
 func (c *BoardController) DeleteBoardById(ctx *fiber.Ctx) error {
 	boardID, err := ctx.ParamsInt("id")
 	if err != nil {
@@ -188,6 +226,20 @@ func (c *BoardController) DeleteBoardById(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Board deleted successfully"})
 }
 
+// EditBoard godoc
+// @Summary Edit a board
+// @Description Edit a board's name by its ID.  This endpoint requires cookie authentication.
+// @Tags boards
+// @Accept json
+// @Produce json
+// @Security CookieAuth
+// @Param   request path int true "Board ID parameter" minimum(1) example(1)
+// @Param name_board formData string true "New name of the board"
+// @Success 200 {object} web.BoardResponse
+// @Failure 400 {object} web.ErrorResponse
+// @Failure 404 {object} web.ErrorResponse
+// @Failure 500 {object} web.ErrorResponse
+// @Router /board/{id} [put]
 func (c *BoardController) EditBoard(ctx *fiber.Ctx) error {
 	boardID, err := ctx.ParamsInt("id")
 	if err != nil {

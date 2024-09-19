@@ -12,8 +12,15 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/fiber/v2/middleware/session"
+	"github.com/gofiber/swagger"
+
+	_ "manajemen_tugas_master/docs"
 )
 
+// @title           Project Management App
+// @description     API documentation
+
+// @contact.email  m.andres.novrizal@gmail.com
 var store *session.Store
 
 func main() {
@@ -25,6 +32,7 @@ func main() {
 	}
 
 	fiberApp := fiber.New()
+	fiberApp.Get("/swagger/*", swagger.HandlerDefault)
 
 	fiberApp.Use(cors.New(cors.Config{
 		AllowOrigins:     "https://master.d3nck08c8eblbc.amplifyapp.com,http://127.0.0.1:5173,https://manajementugas.com,https://www.manajementugas.com",
