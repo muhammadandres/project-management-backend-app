@@ -180,4 +180,4 @@ Defines how to build a Docker image for this application
 ## System Architecture
 
 You can view the system architecture diagram of the application at this link:
-https://drive.google.com/file/d/13TIeluuvUF3TMFZ44XknJHCH68avRHXu/view?usp=drive_link
+https://drive.google.com/file/d/1fKJ_5ZkzJ9946oK2YgvCUuSGZvl8L1ve/view?usp=sharing
